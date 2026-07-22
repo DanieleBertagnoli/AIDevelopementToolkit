@@ -1,0 +1,38 @@
+site_name: AIDevelopementToolkit
+
+site_name: AIDevelopementToolkit
+
+repo_url: https://github.com/DanieleBertagnoli/AIDevelopementToolkit
+repo_name: AIDevelopementToolkit
+
+theme:
+  name: readthedocs
+
+nav:
+  - Home: index.md
+  - AIDevelopementToolkit: aidevelopementtoolkit/
+
+plugins:
+  - search
+
+  - gen-files:
+      scripts:
+        - docs/generate_ref_pages.py
+
+  - literate-nav
+
+  - mkdocstrings:
+      handlers:
+        python:
+          paths:
+            - .
+          options:
+            docstring_style: numpy
+            show_root_heading: true
+            show_source: true
+            show_signature_annotations: true
+            members_order: source
+
+markdown_extensions:
+  - admonition
+  - pymdownx.superfences

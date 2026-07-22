@@ -1,0 +1,11 @@
+__pycache__/
+
+aidevelopementtoolkit.egg-info/
+uv.lock
+
+build/
+dist/
+data/
+.env
+
+deploy.sh
