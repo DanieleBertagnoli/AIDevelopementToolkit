@@ -1,7 +1,8 @@
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 from aidevelopementtoolkit.logging_utils.logger import get_formatted_logger
 import numpy as np
+from scipy.spatial.distance import cdist
 from tqdm import tqdm
 from sklearn.metrics import (
     confusion_matrix,
@@ -259,10 +260,118 @@ def compute_confusion_matrix(
     )
 
 
+def cluster_distance_stats(
+        embeddings: np.ndarray,
+        cluster_ids: np.ndarray,
+        metric: str = "euclidean",
+    ) -> Tuple[float, float]:
+    """Compute intra- and inter-cluster distance statistics.
+
+    Notes
+    -----
+    Intra-cluster distance is the mean pairwise distance between every pair of
+    points that belong to the **same** cluster, averaged across all clusters.
+
+    Inter-cluster distance is the mean pairwise distance between every pair of
+    points that belong to **different** clusters.
+
+    Any distance metric accepted by `scipy.spatial.distance.cdist` can be
+    used (e.g. `"euclidean"`, `"cosine"`, `"cityblock"`).
+
+    Parameters
+    ----------
+    embeddings : np.ndarray
+        2-D array of point coordinates with shape `(N, D)` where:
+        - `N`: Number of points
+        - `D`: Embedding dimensionality
+
+    cluster_ids : np.ndarray
+        1-D integer array of cluster assignments with shape `(N,)`.
+        Each element is the cluster id of the corresponding embedding.
+
+    metric : str, default="euclidean"
+        Distance metric forwarded to `scipy.spatial.distance.cdist`.
+
+    Returns
+    -------
+    Tuple[float, float]
+        Respectively:
+            - Mean intra-cluster distance (`nan` when every cluster has
+              fewer than two points).
+            - Mean inter-cluster distance (`nan` when all points belong to
+              the same cluster).
+
+    Examples
+    --------
+    >>> embeddings = np.array(
+    ...     [
+    ...         [0.0, 0.0],
+    ...         [1.0, 0.0],
+    ...         [5.0, 0.0],
+    ...         [6.0, 0.0],
+    ...     ]
+    ... )
+    >>> cluster_ids = np.array([0, 0, 1, 1])
+    >>> intra_d, inter_d = cluster_distance_stats(
+    ...     embeddings=embeddings,
+    ...     cluster_ids=cluster_ids,
+    ...     metric="euclidean",
+    ... )
+    """
+
+    embeddings = np.asarray(embeddings, dtype=np.float64)
+    cluster_ids = np.asarray(cluster_ids, dtype=np.int64)
+
+    if embeddings.ndim != 2:
+        logger.error(
+            "The given `embeddings` must be a 2-D array with shape `(N, D)`. "
+            f"Received shape {embeddings.shape}."
+        )
+        raise ValueError()
+
+    if cluster_ids.ndim != 1 or cluster_ids.shape[0] != embeddings.shape[0]:
+        logger.error(
+            "The given `cluster_ids` must be a 1-D array with length N matching "
+            f"`embeddings`. Received shape {cluster_ids.shape} vs {embeddings.shape}."
+        )
+        raise ValueError()
+
+    unique_ids = np.unique(cluster_ids)
+
+    # Intra cluster distances
+    intra_means = []
+    for cid in unique_ids:
+        mask = cluster_ids == cid
+        pts = embeddings[mask]
+        if pts.shape[0] < 2:
+            continue
+        dists = cdist(pts, pts, metric=metric)
+        # upper triangle only (exclude diagonal zeros)
+        upper = dists[np.triu_indices(pts.shape[0], k=1)]
+        intra_means.append(upper.mean())
+
+    intra_d = float(np.mean(intra_means)) if intra_means else float(np.nan)
+
+    # Inter cluster distances
+    inter_distances = []
+    for i, cid_a in enumerate(unique_ids):
+        for cid_b in unique_ids[i + 1:]:
+            pts_a = embeddings[cluster_ids == cid_a]
+            pts_b = embeddings[cluster_ids == cid_b]
+            dists = cdist(pts_a, pts_b, metric=metric)
+            inter_distances.append(dists.mean())
+
+    inter_d = float(np.mean(inter_distances)) if inter_distances else float(np.nan)
+
+    return intra_d, inter_d
+
+
 def compute_clustering_metrics(
         predictions: np.ndarray,
         labels: np.ndarray,
         padding_mask: np.ndarray,
+        embeddings: Optional[np.ndarray] = None,
+        metric: str = "euclidean",
     ) -> Tuple[Dict[str, np.ndarray], Dict[str, float]]:
     """Compute clustering metrics for one or more sequences.
 
@@ -274,9 +383,12 @@ def compute_clustering_metrics(
     - V-Measure Score
     - Fowlkes-Mallows Score
     - Elements Like Me (ELM) Score
+    - Intra-Cluster Distance (only when `embeddings` is provided)
+    - Inter-Cluster Distance (only when `embeddings` is provided)
 
     The first four metrics are computed through `sklearn.metrics` (https://scikit-learn.org/stable/api/sklearn.metrics.html).
     The ELM score is computed by following the paper: https://link.springer.com/article/10.1007/s10791-024-09436-7.
+    Intra/Inter-Cluster distances are computed via :func:`cluster_distance_stats`.
 
     Degenerate clusterings (only one predicted or one ground-truth cluster) are excluded from the averaged 
     Homogeneity, Completeness and V-Measure statistics for this evaluation protocol.
@@ -293,6 +405,16 @@ def compute_clustering_metrics(
 
     padding_mask : np.ndarray
         Boolean array where `True` indicates padding. Same shape as `predictions`.
+
+    embeddings : np.ndarray, default=None
+        Point embeddings used to compute distance-based statistics via
+        :func:`cluster_distance_stats`. Accepted shapes `(T, D)` or
+        `(B, T, D)` where `D` is the embedding dimensionality. When
+        `None` the distance metrics are omitted from the output.
+
+    metric : str, default="euclidean"
+        Distance metric forwarded to :func:`cluster_distance_stats`.
+        Ignored when `embeddings` is `None`.
 
     Returns
     -------
@@ -320,6 +442,10 @@ def compute_clustering_metrics(
     labels = np.asarray(labels, dtype=np.int64)
     padding_mask = np.asarray(padding_mask, dtype=bool)
 
+    use_embeddings = embeddings is not None
+    if use_embeddings:
+        embeddings = np.asarray(embeddings, dtype=np.float64)
+
     if predictions.shape != labels.shape:
         logger.error(
             "The given `predictions` and `labels` have different shapes: "
@@ -338,11 +464,20 @@ def compute_clustering_metrics(
         predictions = predictions[None, :]
         labels = labels[None, :]
         padding_mask = padding_mask[None, :]
+        if use_embeddings:
+            embeddings = embeddings[None, :]
 
     if predictions.ndim != 2:
         logger.error(
             "The given arrays must have shape `(T,)` or `(B, T)`. "
             f"Received {predictions.shape}."
+        )
+        raise ValueError()
+
+    if use_embeddings and embeddings.ndim != 3:
+        logger.error(
+            "The given `embeddings` must have shape `(T, D)` or `(B, T, D)`. "
+            f"Received {embeddings.shape}."
         )
         raise ValueError()
 
@@ -355,6 +490,10 @@ def compute_clustering_metrics(
         "Fowlkes-Mallows Score": np.full(B, np.nan),
         "Elements Like Me Score": np.full(B, np.nan),
     }
+
+    if use_embeddings:
+        non_averaged["Intra-Cluster Distance"] = np.full(B, np.nan)
+        non_averaged["Inter-Cluster Distance"] = np.full(B, np.nan)
 
     for batch_idx in tqdm(
         range(B),
@@ -377,6 +516,16 @@ def compute_clustering_metrics(
 
         non_averaged["Fowlkes-Mallows Score"][batch_idx] = fowlkes_mallows_score(gt, pred)
         non_averaged["Elements Like Me Score"][batch_idx] = _elm_score(pred, gt)
+
+        if use_embeddings:
+            emb = embeddings[batch_idx][valid]
+            intra_d, inter_d = cluster_distance_stats(
+                embeddings=emb,
+                cluster_ids=pred,
+                metric=metric,
+            )
+            non_averaged["Intra-Cluster Distance"][batch_idx] = intra_d
+            non_averaged["Inter-Cluster Distance"][batch_idx] = inter_d
 
         n_pred_clusters = np.unique(pred).size
         n_gt_clusters = np.unique(gt).size
