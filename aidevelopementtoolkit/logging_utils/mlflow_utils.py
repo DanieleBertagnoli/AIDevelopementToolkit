@@ -20,7 +20,7 @@ def start_mlflow_run(experiment_name: str, mlflow_kwargs: Dict[str, Any]) -> Non
     The function checks for the presence of the `MLFLOW_ENDPOINT_URL` environment variable.
     If the provided MLflow tracking URI is a remote server (i.e., starts with "http"), it also checks 
     for the presence of the following environment variables:
-    - `REQUEST_CA_BUNDLE`
+    - `REQUESTS_CA_BUNDLE`
     - `MLFLOW_TRACKING_USERNAME`
     - `MLFLOW_TRACKING_PASSWORD`
     - `MLFLOW_TRACKING_CERT_PATH`
@@ -71,7 +71,7 @@ def start_mlflow_run(experiment_name: str, mlflow_kwargs: Dict[str, Any]) -> Non
     if mlflow_tracking_uri.startswith("http"):
 
         needed_env_vars = [
-            "REQUEST_CA_BUNDLE",
+            "REQUESTS_CA_BUNDLE",
             "MLFLOW_TRACKING_USERNAME",
             "MLFLOW_TRACKING_PASSWORD",
             "MLFLOW_TRACKING_CERT_PATH",
