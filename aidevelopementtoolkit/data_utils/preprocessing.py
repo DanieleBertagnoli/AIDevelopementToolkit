@@ -1,4 +1,4 @@
-from typing import Literal, Optional, Tuple
+from typing import Optional, Tuple, Union
 
 import numpy as np
 from aidevelopementtoolkit.logging_utils.logger import get_formatted_logger
@@ -7,22 +7,31 @@ logger = get_formatted_logger(name=__name__, level="ERROR")
 
 def standardize(
         data: np.ndarray,
-        processing_type: Literal["dataset", "sequence"] = "sequence",
+        axis: Optional[Union[int, Tuple[int, ...]]] = None,
+        keepdims: bool = True,
+        nan_handling: bool = False,
+        eps: float = 1e-8,
     ) -> np.ndarray:
     """Standardize data using mean and standard deviation.
 
     Parameters
     ----------
     data : np.ndarray
-        Input data with shape `(B, T, F)`:
-        - `B`: Batch dimension
-        - `T`: Sequence length
-        - `F`: Number of features
+        Input data of any shape.
 
-    processing_type : Literal["dataset", "sequence"], default="sequence"
-        Determines how statistics are computed:
-        - `"dataset"`: Compute mean and std over all samples and timesteps.
-        - `"sequence"`: Compute mean and std independently for each sequence.
+    axis : Optional[Union[int, Tuple[int, ...]]], default=None
+        Axis or axes along which to compute mean and std.
+        If `None`, statistics are computed over the entire array.
+
+    keepdims : bool, default=True
+        Whether the reduced axes are kept as dimensions of size 1.
+
+    nan_handling : bool, default=False
+        When `True`, uses `np.nanmean` and `np.nanstd` to ignore NaN values.
+
+    eps : float, default=1e-8
+        Small constant added to the standard deviation to avoid division by
+        zero.
 
     Returns
     -------
@@ -36,35 +45,18 @@ def standardize(
     Examples
     --------
     >>> data = np.random.rand(2, 3, 4).astype(np.float32)
-    >>> standardized = standardize(data, processing_type="dataset")
+    >>> standardized = standardize(data, axis=(0, 1), keepdims=True)
+    >>> standardized = standardize(data, axis=1, keepdims=True, eps=1e-6)
     """
 
     data = np.asarray(data, dtype=np.float32)
 
-    if data.ndim != 3:
-        logger.error(
-            "The given data must have shape `(B, T, F)`. "
-            f"Received {data.shape}."
-        )
-        raise ValueError()
+    mean_fn = np.nanmean if nan_handling else np.mean
+    std_fn = np.nanstd if nan_handling else np.std
 
-    if processing_type not in {"dataset", "sequence"}:
-        logger.error(
-            "Invalid processing_type. Expected 'dataset' or 'sequence', "
-            f"received {processing_type}."
-        )
-        raise ValueError()
-
-    if processing_type == "dataset":
-        mean = np.mean(data, axis=(0, 1), keepdims=True)
-        std = np.std(data, axis=(0, 1), keepdims=True)
-
-    else:
-        mean = np.mean(data, axis=1, keepdims=True)
-        std = np.std(data, axis=1, keepdims=True)
-
-    # Avoid division by zero for constant features
-    std = np.where(std == 0, 1.0, std)
+    mean = mean_fn(data, axis=axis, keepdims=keepdims)
+    std = std_fn(data, axis=axis, keepdims=keepdims)
+    std = np.where(std < eps, eps, std)
 
     return (data - mean) / std
 
@@ -72,29 +64,33 @@ def standardize(
 def min_max_scaling(
         data: np.ndarray,
         range: Optional[Tuple[float, float]] = None,
-        processing_type: Literal["dataset", "sequence"] = "sequence",
+        axis: Optional[Union[int, Tuple[int, ...]]] = None,
+        keepdims: bool = True,
+        nan_handling: bool = False,
     ) -> np.ndarray:
     """Apply min-max scaling to data.
 
     Parameters
     ----------
     data : np.ndarray
-        Input data with shape `(B, T, F)`:
-        - `B`: Batch dimension
-        - `T`: Sequence length
-        - `F`: Number of features
+        Input data of any shape.
 
     range : Optional[Tuple[float, float]], default=None
         Target scaling range `(min, max)`.
-        If `None`, the input min and max are computed based on
-        `processing_type` and the data is scaled to `[0, 1]`.
+        If `None`, the data is scaled to `[0, 1]` using statistics computed
+        over `axis`.
 
-        When provided, `processing_type` is ignored.
+    axis : Optional[Union[int, Tuple[int, ...]]], default=None
+        Axis or axes along which to compute min and max.
+        If `None`, statistics are computed over the entire array.
+        Ignored when `range` is provided.
 
-    processing_type : Literal["dataset", "sequence"], default="sequence"
-        Determines how input statistics are computed when `range=None`:
-        - `"dataset"`: Compute min and max over all samples and timesteps.
-        - `"sequence"`: Compute min and max independently for each sequence.
+    keepdims : bool, default=True
+        Whether the reduced axes are kept as dimensions of size 1.
+        Ignored when `range` is provided.
+
+    nan_handling : bool, default=False
+        When `True`, uses `np.nanmin` and `np.nanmax` to ignore NaN values.
 
     Returns
     -------
@@ -107,16 +103,13 @@ def min_max_scaling(
     >>> scaled = min_max_scaling(data, range=(0.0, 1.0))
     >>> scaled.min(), scaled.max()
     (0.0, 1.0)
+    >>> scaled = min_max_scaling(data, axis=1, keepdims=True)
     """
 
     data = np.asarray(data, dtype=np.float32)
 
-    if data.ndim != 3:
-        logger.error(
-            "The given data must have shape `(B, T, F)`. "
-            f"Received {data.shape}."
-        )
-        raise ValueError()
+    min_fn = np.nanmin if nan_handling else np.min
+    max_fn = np.nanmax if nan_handling else np.max
 
     if range is not None:
         if len(range) != 2 or range[0] >= range[1]:
@@ -126,27 +119,13 @@ def min_max_scaling(
             raise ValueError()
 
         target_min, target_max = range
-
-        data_min = np.min(data, axis=(0, 1), keepdims=True)
-        data_max = np.max(data, axis=(0, 1), keepdims=True)
+        data_min = min_fn(data)
+        data_max = max_fn(data)
 
     else:
-        if processing_type not in {"dataset", "sequence"}:
-            logger.error(
-                "Invalid processing_type. Expected 'dataset' or 'sequence', "
-                f"received {processing_type}."
-            )
-            raise ValueError()
-
         target_min, target_max = 0.0, 1.0
-
-        if processing_type == "dataset":
-            data_min = np.min(data, axis=(0, 1), keepdims=True)
-            data_max = np.max(data, axis=(0, 1), keepdims=True)
-
-        else:
-            data_min = np.min(data, axis=1, keepdims=True)
-            data_max = np.max(data, axis=1, keepdims=True)
+        data_min = min_fn(data, axis=axis, keepdims=keepdims)
+        data_max = max_fn(data, axis=axis, keepdims=keepdims)
 
     denominator = data_max - data_min
 
