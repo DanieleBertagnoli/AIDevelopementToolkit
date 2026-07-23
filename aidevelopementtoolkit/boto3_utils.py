@@ -101,7 +101,7 @@ def read_s3_object(
         unit="B",
         unit_scale=True,
         unit_divisor=1024,
-        desc=f"Reading {key} from {bucket}",
+        desc=f"\nReading {key} from {bucket}\n",
         colour="yellow",
         leave=False,
     ) as progress:
@@ -154,7 +154,7 @@ def write_s3_object(
         unit="B",
         unit_scale=True,
         unit_divisor=1024,
-        desc=f"Writing {key} to {bucket}",
+        desc=f"\nWriting {key} to {bucket}\n",
         colour="green",
         leave=False,
     ) as progress:

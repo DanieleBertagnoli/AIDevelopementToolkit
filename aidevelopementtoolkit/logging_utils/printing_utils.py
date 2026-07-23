@@ -1,6 +1,6 @@
 from typing import Optional
 import math
-import tabulate
+from tabulate import tabulate
 
 import pandas as pd
 

@@ -8,11 +8,13 @@ from aidevelopementtoolkit.logging_utils.logger import get_formatted_logger
 import numpy as np
 import pandas as pd
 import yaml
+from PIL import Image
 
 from aidevelopementtoolkit.boto3_utils import create_s3_client, read_s3_object, write_s3_object, parse_s3_path
 
 
-_SUPPORTED_EXTENSIONS = {".json", ".yaml", ".yml", ".csv", ".npy"}
+_SUPPORTED_EXTENSIONS = {".json", ".yaml", ".yml", ".csv", ".npy", ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".webp"}
+_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".webp"}
 
 logger = get_formatted_logger(name=__name__, level="ERROR")
 
@@ -53,6 +55,16 @@ def _serialize_data(data: Any, ext: str) -> bytes:
     bytes
         Serialized data as raw bytes.
     """
+
+    if ext in _IMAGE_EXTENSIONS:
+        buffer = io.BytesIO()
+        if isinstance(data, np.ndarray):
+            data = Image.fromarray(data)
+        fmt = ext.lstrip(".").upper()
+        if fmt == "JPG":
+            fmt = "JPEG"
+        data.save(buffer, format=fmt)
+        return buffer.getvalue()
 
     if ext == ".json":
         return json.dumps(data, indent=4).encode("utf-8")
@@ -95,6 +107,7 @@ def save_file(
         - JSON / YAML: any JSON-serialisable object.
         - CSV: any object convertible to a `pandas.DataFrame` or a `pandas.DataFrame` itself.
         - NPY: a `numpy.ndarray`.
+        - Images (`.png`, `.jpg`, `.jpeg`, `.bmp`, `.tiff`, `.webp`): a `PIL.Image.Image` or a `numpy.ndarray`.
 
     path : str
         Path to the output file, including extension.
@@ -219,10 +232,16 @@ def save_file(
     elif ext == ".npy":
         np.save(path, data)
 
+    # Handle local image files
+    elif ext in _IMAGE_EXTENSIONS:
+        if isinstance(data, np.ndarray):
+            data = Image.fromarray(data)
+        data.save(path)
+
 
 def load_file(
         path: str,
-        return_type: Optional[Literal["numpy", "pandas"]] = "pandas",
+        return_type: Optional[Literal["numpy", "pandas", "pil"]] = "pandas",
     ) -> Any:
     """
     Loads a file. The format is deduced from the file extension.
@@ -243,9 +262,11 @@ def load_file(
         - `"./tmp.json"`
         - `"s3://my-bucket/data/file.json"`
 
-    return_type : Optional[Literal["numpy", "pandas"]], default="pandas"
-        Only relevant for CSV files. Controls whether the data is returned
-        as a `pandas.DataFrame` or a `numpy.ndarray`.
+    return_type : Optional[Literal["numpy", "pandas", "pil"]], default="pandas"
+        Controls the return type for CSV and image files.
+
+        - CSV: `"pandas"` (default) returns a `pandas.DataFrame`; `"numpy"` returns a `numpy.ndarray`.
+        - Images: `"pil"` (default for images) returns a `PIL.Image.Image`; `"numpy"` returns a `numpy.ndarray`.
 
     Returns
     -------
@@ -317,6 +338,17 @@ def load_file(
 
     elif ext == ".npy":
         return np.load(file_data, allow_pickle=False)
+
+    elif ext in _IMAGE_EXTENSIONS:
+        img = Image.open(file_data)
+        img.load()
+        if return_type == "numpy":
+            return np.array(img)
+        elif return_type == "pil":
+            return img
+        else:
+            logger.error(f"Unsupported return type: '{return_type}'. Supported: 'numpy', 'pil'.")
+            raise ValueError()
 
 
 def file_exists(path: str) -> bool:
