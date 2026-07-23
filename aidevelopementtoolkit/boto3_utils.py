@@ -124,7 +124,7 @@ def write_s3_object(
     """
     Upload bytes to an S3 object.
 
-    Displays a ``tqdm`` progress bar during the upload.
+    Displays a `tqdm` progress bar during the upload.
 
     Parameters
     ----------

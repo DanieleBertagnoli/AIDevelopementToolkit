@@ -19,8 +19,8 @@ def save_model(
     ) -> None:
     """Save a PyTorch model checkpoint.
 
-    The model weights are saved as ``weights.pt`` and the model
-    configuration is saved as ``model_configs.json`` inside the provided
+    The model weights are saved as `weights.pt` and the model
+    configuration is saved as `configs.json` inside the provided
     checkpoint directory.
 
     Parameters
@@ -60,11 +60,11 @@ def save_model(
 
         checkpoints/model_v1/
         ├── weights.pt
-        └── model_configs.json
+        └── configs.json
     """
 
     model_path = os.path.join(checkpoint_dir, "weights.pt")
-    checkpoint_path = os.path.join(checkpoint_dir, "model_configs.json")
+    checkpoint_path = os.path.join(checkpoint_dir, "configs.json")
 
     torch.save(model.state_dict(), model_path)
     save_file(model_configs, checkpoint_path)
@@ -78,7 +78,7 @@ def load_model(
     """Load a PyTorch model checkpoint.
 
     The model class must accept the parameters stored in
-    ``model_configs.json`` as keyword arguments.
+    `configs.json` as keyword arguments.
 
     Parameters
     ----------
@@ -86,7 +86,7 @@ def load_model(
         Model class used to recreate the architecture.
 
     checkpoint_dir : str
-        Directory containing ``weights.pt`` and ``model_configs.json``.
+        Directory containing `weights.pt` and `configs.json`.
 
     map_location : str, default="cpu"
         Device where model weights are loaded.
@@ -119,7 +119,7 @@ def load_model(
         logger.error(f"Checkpoint directory '{checkpoint_dir}' does not exist.")
         raise FileNotFoundError()
 
-    model_configs_path = os.path.join(checkpoint_dir, "model_configs.json")
+    model_configs_path = os.path.join(checkpoint_dir, "configs.json")
     if not os.path.exists(model_configs_path):
         logger.error(f"Model configuration file '{model_configs_path}' does not exist.")
         raise FileNotFoundError()
@@ -157,7 +157,7 @@ def export_to_onnx(
         Input tensor shapes excluding the batch dimension.
 
     input_names : List[str]
-        Names assigned to ONNX input tensors. Must match ``input_shape``.
+        Names assigned to ONNX input tensors. Must match `input_shape`.
 
     output_names : List[str]
         Names assigned to ONNX output tensors.
@@ -288,7 +288,7 @@ def print_model_summary(
     """Print a summary of a PyTorch model.
 
     The summary includes layer information, parameter counts, and tensor
-    shapes using ``torchsummary``.
+    shapes using `torchsummary`.
 
     Parameters
     ----------
