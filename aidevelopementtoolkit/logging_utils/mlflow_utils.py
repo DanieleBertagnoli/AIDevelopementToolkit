@@ -23,8 +23,8 @@ def start_mlflow_run(experiment_name: str, mlflow_kwargs: Dict[str, Any]) -> Non
     - `REQUESTS_CA_BUNDLE`
     - `MLFLOW_TRACKING_USERNAME`
     - `MLFLOW_TRACKING_PASSWORD`
-    - `MLFLOW_TRACKING_CERT_PATH`
-    - `MLFLOW_S3_ENDPOINT_URL`
+    - `MLFLOW_TRACKING_SERVER_CERT_PATH`
+    - `MLFLOW_ENDPOINT_URL`
 
     If you are using a local MLflow server (i.e., the tracking URI starts with "sqlite:///"), the function
       will create an artifacts directory in the same location as the SQLite database.
@@ -74,8 +74,8 @@ def start_mlflow_run(experiment_name: str, mlflow_kwargs: Dict[str, Any]) -> Non
             "REQUESTS_CA_BUNDLE",
             "MLFLOW_TRACKING_USERNAME",
             "MLFLOW_TRACKING_PASSWORD",
-            "MLFLOW_TRACKING_CERT_PATH",
-            "MLFLOW_S3_ENDPOINT_URL",
+            "MLFLOW_TRACKING_SERVER_CERT_PATH",
+            "MLFLOW_ENDPOINT_URL",
         ]
 
         for env_var in needed_env_vars:
