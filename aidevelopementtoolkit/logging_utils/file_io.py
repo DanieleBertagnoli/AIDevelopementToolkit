@@ -312,8 +312,45 @@ def load_file(
             return df
 
         else:
-            logger.error(f"Unsupported file extension: '{ext}'")
+            logger.error(f"Unsupported return type: '{return_type}'. Supported: 'numpy', 'pandas'.")
             raise ValueError()
 
     elif ext == ".npy":
         return np.load(file_data, allow_pickle=False)
+
+
+def file_exists(path: str) -> bool:
+    """
+    Checks if a file exists. Works for both local and S3 paths.
+
+    Parameters
+    ----------
+    path : str
+        Path to the file, including extension.
+
+        Examples:
+
+        - `"./tmp.json"`
+        - `"s3://my-bucket/data/file.json"`
+
+    Returns
+    -------
+    bool
+        `True` if the file exists, `False` otherwise.
+
+    Examples
+    --------
+    >>> save_file({"a": 1}, "./tmp.json")
+    >>> file_exists("./tmp.json")
+    True
+    >>> file_exists("s3://my-bucket/data/file.json")
+    False
+    """
+
+    if path.startswith("s3://"):
+        bucket, key = parse_s3_path(path)
+        client = create_s3_client()
+        return read_s3_object(client=client, bucket=bucket, key=key) is not None
+
+    else:
+        return os.path.exists(path)

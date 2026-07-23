@@ -1,3 +1,9 @@
+from typing import Optional
+import math
+import tabulate
+
+import pandas as pd
+
 def print_table(
         df: pd.DataFrame, 
         max_rows: Optional[int] = None,

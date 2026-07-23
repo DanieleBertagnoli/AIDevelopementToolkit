@@ -39,7 +39,7 @@ def get_formatted_logger(
     
     # Set formatter
     formatter = ColorFormatter(
-        "%(asctime)s %(levelname)s %(message)s",
+        "%(name)s %(asctime)s %(levelname)s %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S"
     )
     handler.setFormatter(formatter)
