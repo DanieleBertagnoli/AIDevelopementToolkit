@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>printing_utils - AIDevelopementToolkit</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var properdocs_page_name = "printing_utils";
+        var properdocs_page_input_path = "aidevelopementtoolkit/logging_utils/printing_utils.md";
+        var properdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> AIDevelopementToolkit
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">Home</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">AIDevelopementToolkit</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../../"></a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../boto3_utils/">boto3_utils</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >data_utils</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../data_utils/">Index</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../data_utils/metrics/">metrics</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../data_utils/preprocessing/">preprocessing</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../general_utils/">general_utils</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" >logging_utils</a>
+    <ul class="current">
+                <li class="toctree-l2"><a class="reference internal" href="../">Index</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../file_io/">file_io</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../logger/">logger</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../mlflow_utils/">mlflow_utils</a>
+                </li>
+                <li class="toctree-l2 current"><a class="reference internal current" href="#">printing_utils</a>
+    <ul class="current">
+    <li class="toctree-l3"><a class="reference internal" href="#aidevelopementtoolkit.logging_utils.printing_utils.print_table">print_table</a>
+    </li>
+    </ul>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../pyplot_utils/">pyplot_utils</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >torch_utils</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../torch_utils/">Index</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../torch_utils/EarlyStopper/">EarlyStopper</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../torch_utils/distributed_torch_utils/">distributed_torch_utils</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../torch_utils/model_utils/">model_utils</a>
+                </li>
+    </ul>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">AIDevelopementToolkit</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">AIDevelopementToolkit</li>
+          <li class="breadcrumb-item">logging_utils</li>
+      <li class="breadcrumb-item active">printing_utils</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/DanieleBertagnoli/AIDevelopementToolkit/edit/master/docs/aidevelopementtoolkit/logging_utils/printing_utils.py">Edit on AIDevelopementToolkit</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <div class="doc doc-object doc-module">
+
+
+
+<h2 id="aidevelopementtoolkit.logging_utils.printing_utils" class="doc doc-heading">
+            <code>aidevelopementtoolkit.logging_utils.printing_utils</code>
+
+
+</h2>
+
+    <div class="doc doc-contents first">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="aidevelopementtoolkit.logging_utils.printing_utils.print_table" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">print_table</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">max_rows</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">tablefmt</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;rounded_grid&#39;</span><span class="p">,</span> <span class="n">max_num_columns</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Print a pandas DataFrame as a formatted table in the terminal.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>df</code></b>
+                  (<code><span title="pandas.DataFrame">DataFrame</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>The DataFrame to display.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>max_rows</code></b>
+                  (<code><span title="typing.Optional">Optional</span>[<span title="int">int</span>]</code>, default:
+                      <code>None</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Maximum number of rows to print. If None, all rows are shown.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>tablefmt</code></b>
+                  (<code><span title="str">str</span></code>, default:
+                      <code>&#34;rounded_grid&#34;</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Table format used to print the table.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>max_num_columns</code></b>
+                  (<code><span title="typing.Optional">Optional</span>[<span title="int">int</span>]</code>, default:
+                      <code>None</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>If set, splits the DataFrame into multiple tables each having at most
+this number of columns. The index is preserved and printed.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<details class="note" open>
+  <summary>Notes</summary>
+  <p>Uses <code>tabulate</code> for rendering. Does not modify the DataFrame.</p>
+</details>
+
+<p><span class="doc-section-title">Examples:</span></p>
+    <p>Basic usage:
+    &gt;&gt;&gt; df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
+    &gt;&gt;&gt; print_table(df)</p>
+<p>Limit number of rows:
+    &gt;&gt;&gt; print_table(df, max_rows=1)</p>
+<p>Change table format:
+    &gt;&gt;&gt; print_table(df, tablefmt="github")</p>
+<p>Split into multiple tables (column chunks):
+    &gt;&gt;&gt; wide_df = pd.DataFrame({
+    ...     "A": [1, 2],
+    ...     "B": [3, 4],
+    ...     "C": [5, 6],
+    ...     "D": [7, 8],
+    ... })
+    &gt;&gt;&gt; print_table(wide_df, max_num_columns=2)</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>aidevelopementtoolkit/logging_utils/printing_utils.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span>
+<span class="normal">58</span>
+<span class="normal">59</span>
+<span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span>
+<span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span>
+<span class="normal">69</span>
+<span class="normal">70</span>
+<span class="normal">71</span>
+<span class="normal">72</span>
+<span class="normal">73</span>
+<span class="normal">74</span>
+<span class="normal">75</span>
+<span class="normal">76</span>
+<span class="normal">77</span>
+<span class="normal">78</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">print_table</span><span class="p">(</span>
+        <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> 
+        <span class="n">max_rows</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">tablefmt</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;rounded_grid&quot;</span><span class="p">,</span>
+        <span class="n">max_num_columns</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Print a pandas DataFrame as a formatted table in the terminal.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    df : pandas.DataFrame</span>
+<span class="sd">        The DataFrame to display.</span>
+
+<span class="sd">    max_rows : Optional[int], default=None</span>
+<span class="sd">        Maximum number of rows to print. If None, all rows are shown.</span>
+
+<span class="sd">    tablefmt : str, default=&quot;rounded_grid&quot;</span>
+<span class="sd">        Table format used to print the table.</span>
+
+<span class="sd">    max_num_columns : Optional[int], default=None</span>
+<span class="sd">        If set, splits the DataFrame into multiple tables each having at most</span>
+<span class="sd">        this number of columns. The index is preserved and printed.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Uses `tabulate` for rendering. Does not modify the DataFrame.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    Basic usage:</span>
+<span class="sd">        &gt;&gt;&gt; df = pd.DataFrame({&quot;A&quot;: [1, 2], &quot;B&quot;: [3, 4]})</span>
+<span class="sd">        &gt;&gt;&gt; print_table(df)</span>
+
+<span class="sd">    Limit number of rows:</span>
+<span class="sd">        &gt;&gt;&gt; print_table(df, max_rows=1)</span>
+
+<span class="sd">    Change table format:</span>
+<span class="sd">        &gt;&gt;&gt; print_table(df, tablefmt=&quot;github&quot;)</span>
+
+<span class="sd">    Split into multiple tables (column chunks):</span>
+<span class="sd">        &gt;&gt;&gt; wide_df = pd.DataFrame({</span>
+<span class="sd">        ...     &quot;A&quot;: [1, 2],</span>
+<span class="sd">        ...     &quot;B&quot;: [3, 4],</span>
+<span class="sd">        ...     &quot;C&quot;: [5, 6],</span>
+<span class="sd">        ...     &quot;D&quot;: [7, 8],</span>
+<span class="sd">        ... })</span>
+<span class="sd">        &gt;&gt;&gt; print_table(wide_df, max_num_columns=2)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Handle row limit</span>
+    <span class="k">if</span> <span class="n">max_rows</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">df_to_print</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="n">max_rows</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">df_to_print</span> <span class="o">=</span> <span class="n">df</span>
+
+    <span class="c1"># If no column splitting needed</span>
+    <span class="k">if</span> <span class="n">max_num_columns</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">tabulate</span><span class="p">(</span><span class="n">df_to_print</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="s2">&quot;keys&quot;</span><span class="p">,</span> <span class="n">tablefmt</span><span class="o">=</span><span class="n">tablefmt</span><span class="p">,</span> <span class="n">showindex</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+        <span class="k">return</span>
+
+    <span class="c1"># Split columns into chunks</span>
+    <span class="n">num_cols</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">df_to_print</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+    <span class="n">num_chunks</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">num_cols</span> <span class="o">/</span> <span class="n">max_num_columns</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_chunks</span><span class="p">):</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="n">i</span> <span class="o">*</span> <span class="n">max_num_columns</span>
+        <span class="n">end</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="n">max_num_columns</span>
+        <span class="n">df_chunk</span> <span class="o">=</span> <span class="n">df_to_print</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">--- Columns </span><span class="si">{</span><span class="n">start</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="nb">min</span><span class="p">(</span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="n">num_cols</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2"> ---&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">tabulate</span><span class="p">(</span><span class="n">df_chunk</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="s2">&quot;keys&quot;</span><span class="p">,</span> <span class="n">tablefmt</span><span class="o">=</span><span class="n">tablefmt</span><span class="p">,</span> <span class="n">showindex</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../mlflow_utils/" class="btn btn-neutral float-left" title="mlflow_utils"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../pyplot_utils/" class="btn btn-neutral float-right" title="pyplot_utils">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://properdocs.org/">ProperDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/DanieleBertagnoli/AIDevelopementToolkit" class="fa fa-code-fork" style="color: #fcfcfc"> AIDevelopementToolkit</a>
+        </span>
+    
+    
+      <span><a href="../mlflow_utils/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../pyplot_utils/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
