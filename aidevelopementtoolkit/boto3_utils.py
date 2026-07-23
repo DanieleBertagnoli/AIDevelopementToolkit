@@ -4,6 +4,7 @@ import io
 import os
 
 import boto3
+from boto3.s3.transfer import TransferConfig
 from tqdm import tqdm
 
 from aidevelopementtoolkit.logging_utils.logger import get_formatted_logger
@@ -90,11 +91,15 @@ def read_s3_object(
     >>> data = read_s3_object(client, bucket="my-bucket", key="data/file.npy")
     """
 
-    response = client.get_object(Bucket=bucket, Key=key)
+    response = client.head_object(Bucket=bucket, Key=key)
     total = response["ContentLength"]
-    body = response["Body"]
 
     buffer = io.BytesIO()
+
+    config = TransferConfig(
+        multipart_threshold=_CHUNK_SIZE,
+        multipart_chunksize=_CHUNK_SIZE,
+    )
 
     with tqdm(
         total=total,
@@ -105,13 +110,15 @@ def read_s3_object(
         colour="yellow",
         leave=False,
     ) as progress:
-        while True:
-            chunk = body.read(_CHUNK_SIZE)
-            if not chunk:
-                break
-            buffer.write(chunk)
-            progress.update(len(chunk))
+        client.download_fileobj(
+            bucket,
+            key,
+            buffer,
+            Config=config,
+            Callback=lambda n: progress.update(n),
+        )
 
+    buffer.seek(0)
     return buffer.getvalue()
 
 
