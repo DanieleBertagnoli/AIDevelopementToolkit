@@ -252,6 +252,7 @@ class Trainer:
         self.early_stopper = EarlyStopper(
             delta_for_new_best=0.1,
             delta_type="relative",
+            criterion="min",
             patience=patience,
         )
         self.validator = validator
@@ -320,13 +321,6 @@ class Trainer:
 
         for e in range(1, self.epochs+1):
 
-            # Tensor used for early stopping (DDP cross-process communication)
-            stop_tensor = torch.zeros(
-                1,
-                device=self.device,
-                dtype=torch.int
-            )
-
             dist_barrier()
 
             model.train()
@@ -350,6 +344,8 @@ class Trainer:
 
             val_loss, val_metrics = self.validator.validate(model.module, val_dataloader, e)
 
+            new_best, stop = self.early_stopper.set_epoch_loss(val_loss)
+
             # Only the main process will execute
             if rank == 0:
 
@@ -359,9 +355,8 @@ class Trainer:
                 for k, v in val_metrics.items():
                     logger.info(f"Validation {k}: {v}")
 
-                ### Checkpoint ###
 
-                new_best, stop = self.early_stopper.set_epoch_metric(val_loss)
+                ### Checkpoint ###
 
                 if new_best:
                     save_model_checkpoint(model.module, {}, "best")
@@ -379,16 +374,9 @@ class Trainer:
 
                 mlflow.log_metrics(metrics=metrics, step=e)
 
-                if stop:
-                    logger.info("The early stopping has been triggered")
-                    stop_tensor = torch.tensor(int(stop), device=self.device)
-
-
-            # Use rank 0 stop tensor
-            dist.broadcast(stop_tensor, src=0)
-
-            if stop_tensor.item():
-                return model.module
+                if stop: logger.info("The early stopping has been triggered")
+                
+            if stop: return model.module
 
         return model.module
 
@@ -514,6 +502,8 @@ def main(log_level: str) -> None:
     dist.destroy_process_group()
 
 if __name__ == "__main__":
+
+    os.environ["MLFLOW_ENDPOINT_URL"] = "sqlite:///data/mlflow_folder/mlflow.db"
 
     if "RANK" not in os.environ or "WORLD_SIZE" not in os.environ:
         logger = get_formatted_logger()

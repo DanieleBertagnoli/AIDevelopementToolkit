@@ -6,7 +6,7 @@ import shutil
 from torch import nn
 import mlflow
 
-from aidevelopementtoolkit.logging_utils.file_io import load_json, load_yaml
+from aidevelopementtoolkit.logging_utils.file_io import load_file
 from aidevelopementtoolkit.logging_utils.logger import get_formatted_logger
 from aidevelopementtoolkit.torch_utils.model_utils import save_model
 
@@ -161,12 +161,12 @@ def log_run_parameters(
         # Case 2: Recursive logging enabled, then check if value is a YAML or JSON file
         if recursive_logging and isinstance(value, str) and os.path.isfile(value):
             if value.endswith((".yaml", ".yml")):
-                nested_dict = load_yaml(value)
+                nested_dict = load_file(value)
                 if isinstance(nested_dict, dict):
                     log_run_parameters(nested_dict, full_key, recursive_logging=recursive_logging)
                     continue
             elif value.endswith(".json"):
-                nested_dict = load_json(value)
+                nested_dict = load_file(value)
                 if isinstance(nested_dict, dict):
                     log_run_parameters(nested_dict, full_key, recursive_logging=recursive_logging)
                     continue
