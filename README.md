@@ -1,5 +1,9 @@
 # AIDevelopementToolkit
 
+<div align="center">
+    <center><img src='assets/logo.png' width="400"></center>
+</div>
+
 AIDevelopementToolkit is a production-ready Python package that provides reusable utilities for AI development workflows.
 The library is designed to help teams standardize training pipelines, logging, experiment tracking, preprocessing, and PyTorch model management without locking users into a single framework.
 

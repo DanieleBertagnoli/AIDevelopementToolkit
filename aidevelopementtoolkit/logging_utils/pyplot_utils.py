@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 
 import numpy as np
 import plotly.express as px
@@ -16,6 +16,8 @@ def plot_heatmap(
         xaxis_title: str,
         yaxis_title: str,
         path: str,
+        xticklabels: Optional[List[str]] = None,
+        yticklabels: Optional[List[str]] = None,
     ) -> go.Figure:
     """Plot a matrix as an annotated heatmap.
 
@@ -36,6 +38,14 @@ def plot_heatmap(
     path : str
         Path where the figure will be saved. If an MLFlow
         run is started, the figure is logged in the given `path`.
+
+    xticklabels : Optional[List[str]], default=None
+        Labels for the X-axis ticks. Must have length equal to the number of
+        columns in `data`. If `None`, column indices are used.
+
+    yticklabels : Optional[List[str]], default=None
+        Labels for the Y-axis ticks. Must have length equal to the number of
+        rows in `data`. If `None`, row indices are used.
 
     Returns
     -------
@@ -120,14 +130,14 @@ def plot_heatmap(
     fig.update_xaxes(
         tickmode="array",
         tickvals=list(range(n_cols)),
-        ticktext=[str(i) for i in range(n_cols)],
+        ticktext=xticklabels if xticklabels is not None else [str(i) for i in range(n_cols)],
         side="bottom",
     )
 
     fig.update_yaxes(
         tickmode="array",
         tickvals=list(range(n_rows)),
-        ticktext=[str(i) for i in range(n_rows)],
+        ticktext=yticklabels if yticklabels is not None else [str(i) for i in range(n_rows)],
         autorange="reversed",
     )
 
@@ -150,6 +160,8 @@ def plot_scatter(
         marker_size: int = 8,
         marker_opacity: float = 1,
         palette: str = "Plotly",
+        xticklabels: Optional[List[str]] = None,
+        yticklabels: Optional[List[str]] = None,
     ) -> go.Figure:
     """Plot a scatter plot.
 
@@ -187,6 +199,12 @@ def plot_scatter(
     palette : str, default="Plotly"
         Qualitative Plotly color palette to use when labels are provided.
         Examples: "Plotly", "D3", "Set1", "Set2", "Dark24".
+
+    xticklabels : Optional[List[str]], default=None
+        Custom labels for the X-axis ticks. If `None`, Plotly defaults are used.
+
+    yticklabels : Optional[List[str]], default=None
+        Custom labels for the Y-axis ticks. If `None`, Plotly defaults are used.
 
     Returns
     -------
@@ -334,6 +352,11 @@ def plot_scatter(
         yaxis_title=yaxis_title,
     )
 
+    if xticklabels is not None:
+        fig.update_xaxes(tickmode="array", tickvals=list(range(len(xticklabels))), ticktext=xticklabels)
+    if yticklabels is not None:
+        fig.update_yaxes(tickmode="array", tickvals=list(range(len(yticklabels))), ticktext=yticklabels)
+
     if mlflow.active_run() is not None:
         mlflow.log_figure(fig, path)
     else:
@@ -351,6 +374,8 @@ def plot_histogram(
         nbins: Optional[int] = None,
         color: Optional[str] = None,
         opacity: float = 0.75,
+        xticklabels: Optional[List[str]] = None,
+        yticklabels: Optional[List[str]] = None,
     ) -> go.Figure:
     """Plot a histogram.
 
@@ -373,15 +398,21 @@ def plot_histogram(
         run is started, the figure is logged in the given `path`.
 
     nbins : Optional[int], default=None
-        Number of bins. If ``None``, Plotly selects the number
+        Number of bins. If `None`, Plotly selects the number
         of bins automatically.
 
     color : Optional[str], default=None
-        Bar color as a CSS color string (e.g. ``"steelblue"``).
-        If ``None``, the default Plotly color is used.
+        Bar color as a CSS color string (e.g. `"steelblue"`).
+        If `None`, the default Plotly color is used.
 
     opacity : float, default=0.75
         Bar opacity between 0 and 1.
+
+    xticklabels : Optional[List[str]], default=None
+        Custom labels for the X-axis ticks. If `None`, Plotly defaults are used.
+
+    yticklabels : Optional[List[str]], default=None
+        Custom labels for the Y-axis ticks. If `None`, Plotly defaults are used.
 
     Returns
     -------
@@ -458,6 +489,11 @@ def plot_histogram(
         yaxis_title=yaxis_title,
         bargap=0.05,
     )
+
+    if xticklabels is not None:
+        fig.update_xaxes(tickmode="array", tickvals=list(range(len(xticklabels))), ticktext=xticklabels)
+    if yticklabels is not None:
+        fig.update_yaxes(tickmode="array", tickvals=list(range(len(yticklabels))), ticktext=yticklabels)
 
     if mlflow.active_run() is not None:
         mlflow.log_figure(fig, path)
