@@ -499,7 +499,7 @@ def compute_clustering_metrics(
         range(B),
         leave=False,
         colour="cyan",
-        desc="\nComputing clustering metrics 📊\n",
+        desc="Computing clustering metrics 📊",
     ):
 
         valid = ~padding_mask[batch_idx]
