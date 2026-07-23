@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import numpy as np
 import plotly.express as px
@@ -18,6 +18,7 @@ def plot_heatmap(
         path: Optional[str] = None,
         xticklabels: Optional[List[str]] = None,
         yticklabels: Optional[List[str]] = None,
+        zrange: Optional[Tuple[float, float]] = None,
     ) -> go.Figure:
     """Plot a matrix as an annotated heatmap.
 
@@ -46,6 +47,10 @@ def plot_heatmap(
     yticklabels : Optional[List[str]], default=None
         Labels for the Y-axis ticks. Must have length equal to the number of
         rows in `data`. If `None`, row indices are used.
+
+    zrange : Optional[Tuple[float, float]], default=None
+        Tuple specifying the minimum and maximum values for the color scale.
+        When `None` the minimum and maximum values of `data` are used.
 
     Returns
     -------
@@ -91,15 +96,18 @@ def plot_heatmap(
         logger.error(f"Expected a 2D matrix, got {data.shape}")
         raise ValueError()
 
-    data_min = np.min(data)
-    data_max = np.max(data)
-
-    if data_min == data_max:
-        zmin = data_min - 1
-        zmax = data_max + 1
+    if zrange is not None:
+        zmin, zmax = zrange
     else:
-        zmin = data_min
-        zmax = data_max
+        data_min = np.min(data)
+        data_max = np.max(data)
+
+        if data_min == data_max:
+            zmin = data_min - 1
+            zmax = data_max + 1
+        else:
+            zmin = data_min
+            zmax = data_max
 
     n_rows, n_cols = data.shape
 
