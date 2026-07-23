@@ -199,7 +199,7 @@ def compute_confusion_matrix(
     --------
     >>> predictions = np.array([0, 1, 1, 0])
     >>> labels = np.array([0, 1, 0, 0])
-    >>> cm = get_confusion_matrix(
+    >>> cm = compute_confusion_matrix(
     ...     predictions=predictions,
     ...     labels=labels,
     ...     num_classes=2,

@@ -15,7 +15,7 @@ def plot_heatmap(
         title: str,
         xaxis_title: str,
         yaxis_title: str,
-        path: str,
+        path: Optional[str] = None,
         xticklabels: Optional[List[str]] = None,
         yticklabels: Optional[List[str]] = None,
     ) -> go.Figure:
@@ -141,10 +141,11 @@ def plot_heatmap(
         autorange="reversed",
     )
 
-    if mlflow.active_run() is not None:
-        mlflow.log_figure(fig, path)
-    else:
-        fig.write_image(path)
+    if path is not None:
+        if mlflow.active_run() is not None:
+            mlflow.log_figure(fig, path)
+        else:
+            fig.write_image(path)
 
     return fig
 
@@ -155,7 +156,7 @@ def plot_scatter(
         title: str,
         xaxis_title: str,
         yaxis_title: str,
-        path: str,
+        path: Optional[str] = None,
         labels: Optional[np.ndarray] = None,
         marker_size: int = 8,
         marker_opacity: float = 1,
@@ -357,10 +358,11 @@ def plot_scatter(
     if yticklabels is not None:
         fig.update_yaxes(tickmode="array", tickvals=list(range(len(yticklabels))), ticktext=yticklabels)
 
-    if mlflow.active_run() is not None:
-        mlflow.log_figure(fig, path)
-    else:
-        fig.write_image(path)
+    if path is not None:
+        if mlflow.active_run() is not None:
+            mlflow.log_figure(fig, path)
+        else:
+            fig.write_image(path)
 
     return fig
 
@@ -370,7 +372,7 @@ def plot_histogram(
         title: str,
         xaxis_title: str,
         yaxis_title: str,
-        path: str,
+        path: Optional[str] = None,
         nbins: Optional[int] = None,
         color: Optional[str] = None,
         opacity: float = 0.75,
@@ -495,9 +497,10 @@ def plot_histogram(
     if yticklabels is not None:
         fig.update_yaxes(tickmode="array", tickvals=list(range(len(yticklabels))), ticktext=yticklabels)
 
-    if mlflow.active_run() is not None:
-        mlflow.log_figure(fig, path)
-    else:
-        fig.write_image(path)
+    if path is not None:
+        if mlflow.active_run() is not None:
+            mlflow.log_figure(fig, path)
+        else:
+            fig.write_image(path)
 
     return fig
