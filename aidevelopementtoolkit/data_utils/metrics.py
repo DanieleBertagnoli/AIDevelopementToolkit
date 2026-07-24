@@ -1,9 +1,9 @@
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, List, Literal
 
 from aidevelopementtoolkit.logging_utils.logger import get_formatted_logger
 import numpy as np
 from scipy.spatial.distance import cdist
-from sklearn.utils.parallel import Parallel, delayed
+from concurrent.futures import ThreadPoolExecutor
 from tqdm import tqdm
 from sklearn.metrics import (
     confusion_matrix,
@@ -373,7 +373,7 @@ def compute_clustering_metrics(
         padding_mask: np.ndarray,
         embeddings: Optional[np.ndarray] = None,
         metric: str = "euclidean",
-        n_jobs: int = -1,
+        max_workers: Optional[int] = None,
     ) -> Tuple[Dict[str, np.ndarray], Dict[str, float]]:
     """Compute clustering metrics for one or more sequences.
 
@@ -418,9 +418,9 @@ def compute_clustering_metrics(
         Distance metric forwarded to :func:`cluster_distance_stats`.
         Ignored when `embeddings` is `None`.
 
-    n_jobs : int, default=-1
-        Number of parallel workers for batch processing. `-1` uses all
-        available CPU cores. Forwarded to :class:`joblib.Parallel`.
+    max_workers : int or None, default=None
+        Number of parallel workers. `None` uses the default from
+        :class:`concurrent.futures.ThreadPoolExecutor` (`min(32, os.cpu_count() + 4)`).
 
     Returns
     -------
@@ -525,15 +525,14 @@ def compute_clustering_metrics(
 
         return result
 
-    batch_results = Parallel(n_jobs=n_jobs, prefer="threads")(
-        delayed(_process_batch)(i)
-        for i in tqdm(
-            range(B),
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        batch_results = list(tqdm(
+            executor.map(_process_batch, range(B)),
+            total=B,
             leave=False,
             colour="cyan",
             desc="Computing clustering metrics 📊",
-        )
-    )
+        ))
 
     metric_keys = [
         "Completeness",
@@ -592,25 +591,29 @@ def _elm_score(
     if N == 0:
         return np.nan
 
-    # Vectorized pairwise comparison — avoids the O(N) Python loop.
-    # same_pred[i, j] = True iff predictions[i] == predictions[j]
-    # same_true[i, j] = True iff labels[i]      == labels[j]
-    same_pred = predictions[:, None] == predictions[None, :]  # (N, N)
-    same_true = labels[:, None] == labels[None, :]            # (N, N)
+    f1_scores = np.empty(N, dtype=float)
 
-    # Exclude self-comparisons (diagonal)
-    np.fill_diagonal(same_pred, False)
-    np.fill_diagonal(same_true, False)
+    for i in range(N):
 
-    tp = (same_pred & same_true).sum(axis=1).astype(np.float64)   # (N,)
-    fp = (same_pred & ~same_true).sum(axis=1).astype(np.float64)  # (N,)
-    fn = (~same_pred & same_true).sum(axis=1).astype(np.float64)  # (N,)
+        pred_cluster = np.flatnonzero(predictions == predictions[i])
+        true_cluster = np.flatnonzero(labels == labels[i])
 
-    pred_others_empty = same_pred.sum(axis=1) == 0
-    true_others_empty = same_true.sum(axis=1) == 0
-    both_empty = pred_others_empty & true_others_empty
+        # Remove the element itself
+        pred_others = pred_cluster[pred_cluster != i]
+        true_others = true_cluster[true_cluster != i]
 
-    denom = tp + 0.5 * (fp + fn)
-    f1_scores = np.where(both_empty, 1.0, np.where(tp == 0, 0.0, tp / denom))
+        tp = len(np.intersect1d(pred_others, true_others))
+        fp = len(np.setdiff1d(pred_others, true_others))
+        fn = len(np.setdiff1d(true_others, pred_others))
+
+        # F1 (paper Eq. 3 with modified TP)
+        if len(pred_others) == 0 and len(true_others) == 0:
+            f1 = 1.0
+        elif tp == 0:
+            f1 = 0.0
+        else:
+            f1 = tp / (tp + 0.5 * (fp + fn))
+
+        f1_scores[i] = f1
 
     return float(np.mean(f1_scores))
