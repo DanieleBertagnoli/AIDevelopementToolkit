@@ -50,7 +50,7 @@ from aidevelopementtoolkit.logging_utils.logger import get_formatted_logger
 from aidevelopementtoolkit.logging_utils.mlflow_utils import start_mlflow_run, save_model_checkpoint, log_run_parameters
 from aidevelopementtoolkit.torch_utils.EarlyStopper import EarlyStopper
 from aidevelopementtoolkit.data_utils.metrics import compute_classification_metrics, compute_confusion_matrix
-from aidevelopementtoolkit.logging_utils.pyplot_utils import plot_heatmap
+from aidevelopementtoolkit.logging_utils.plotly_utils import plot_heatmap
 from aidevelopementtoolkit.torch_utils.distributed_torch_utils import dist_barrier, get_process_rank
 
 class Validator:

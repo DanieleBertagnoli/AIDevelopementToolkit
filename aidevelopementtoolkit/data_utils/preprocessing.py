@@ -38,10 +38,6 @@ def standardize(
     np.ndarray
         Standardized data with the same shape as input.
 
-    Notes
-    -----
-    Standardization is performed feature-wise.
-
     Examples
     --------
     >>> data = np.random.rand(2, 3, 4).astype(np.float32)

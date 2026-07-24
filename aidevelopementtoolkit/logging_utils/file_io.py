@@ -10,7 +10,7 @@ import pandas as pd
 import yaml
 from PIL import Image
 
-from aidevelopementtoolkit.boto3_utils import create_s3_client, read_s3_object, write_s3_object, parse_s3_path
+from aidevelopementtoolkit.logging_utils.boto3_utils import create_s3_client, read_s3_object, write_s3_object, parse_s3_path
 
 
 _SUPPORTED_EXTENSIONS = {".json", ".yaml", ".yml", ".csv", ".npy", ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".webp"}

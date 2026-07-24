@@ -76,3 +76,37 @@ def print_table(
 
         print(f"\n--- Columns {start} to {min(end, num_cols) - 1} ---")
         print(tabulate(df_chunk, headers="keys", tablefmt=tablefmt, showindex=True))
+
+
+def human_readable(number: float) -> str:
+    """
+    Convert a large number into a human-readable string with suffixes.
+
+    Parameters
+    ----------
+    number : float
+        The number to convert.
+
+    Returns
+    -------
+    str
+        Human-readable string representation of the number.
+
+    Examples
+    --------
+    >>> human_readable(1234567)
+    '1.23M'
+    >>> human_readable(9876543210)
+    '9.88B'
+    >>> human_readable(1234)
+    '1.23K'
+    """
+    abs_number = abs(number)
+    if abs_number >= 1_000_000_000:
+        return f"{number / 1_000_000_000:.2f}B"
+    elif abs_number >= 1_000_000:
+        return f"{number / 1_000_000:.2f}M"
+    elif abs_number >= 1_000:
+        return f"{number / 1_000:.2f}K"
+    else:
+        return str(number)

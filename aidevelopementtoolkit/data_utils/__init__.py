@@ -10,4 +10,6 @@ metrics
     Compute classification and clustering metrics.
 preprocessing
     Data transformation and preprocessing utilities.
+pydantic_utils
+    Utilities for extracting and mutating fields on Pydantic models.
 """
