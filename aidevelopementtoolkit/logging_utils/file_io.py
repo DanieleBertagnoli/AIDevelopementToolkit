@@ -296,6 +296,10 @@ def load_file(
         bucket, key = parse_s3_path(path)
         client = create_s3_client()
 
+        if file_exists(path) is False:
+            logger.error(f"S3 object '{path}' does not exist.")
+            raise FileNotFoundError()
+
         file_data = io.BytesIO(
             read_s3_object(
                 client=client,
