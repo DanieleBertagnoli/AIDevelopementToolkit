@@ -1,4 +1,3 @@
-import os
 from typing import Dict, Optional, Tuple
 
 from aidevelopementtoolkit.logging_utils.logger import get_formatted_logger
@@ -526,7 +525,7 @@ def compute_clustering_metrics(
 
         return result
 
-    batch_results = Parallel(n_jobs=n_jobs)(
+    batch_results = Parallel(n_jobs=n_jobs, prefer="threads")(
         delayed(_process_batch)(i)
         for i in tqdm(
             range(B),
