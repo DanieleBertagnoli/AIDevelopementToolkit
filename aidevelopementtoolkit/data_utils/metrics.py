@@ -4,7 +4,7 @@ from typing import Dict, Optional, Tuple
 from aidevelopementtoolkit.logging_utils.logger import get_formatted_logger
 import numpy as np
 from scipy.spatial.distance import cdist
-from joblib import Parallel, delayed
+from sklearn.utils.parallel import Parallel, delayed
 from tqdm import tqdm
 from sklearn.metrics import (
     confusion_matrix,
