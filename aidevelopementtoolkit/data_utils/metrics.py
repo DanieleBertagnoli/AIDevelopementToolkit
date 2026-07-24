@@ -1,9 +1,9 @@
-from typing import Dict, Optional, Tuple, List, Literal
+from typing import Dict, Optional, Tuple
 
 from aidevelopementtoolkit.logging_utils.logger import get_formatted_logger
 import numpy as np
 from scipy.spatial.distance import cdist
-from concurrent.futures import ThreadPoolExecutor
+from sklearn.utils.parallel import Parallel, delayed
 from tqdm import tqdm
 from sklearn.metrics import (
     confusion_matrix,
@@ -373,7 +373,7 @@ def compute_clustering_metrics(
         padding_mask: np.ndarray,
         embeddings: Optional[np.ndarray] = None,
         metric: str = "euclidean",
-        max_workers: Optional[int] = None,
+        n_jobs: int = -1,
     ) -> Tuple[Dict[str, np.ndarray], Dict[str, float]]:
     """Compute clustering metrics for one or more sequences.
 
@@ -418,9 +418,9 @@ def compute_clustering_metrics(
         Distance metric forwarded to :func:`cluster_distance_stats`.
         Ignored when `embeddings` is `None`.
 
-    max_workers : int or None, default=None
-        Number of parallel workers. `None` uses the default from
-        :class:`concurrent.futures.ThreadPoolExecutor` (`min(32, os.cpu_count() + 4)`).
+    n_jobs : int, default=-1
+        Number of parallel workers for batch processing. `-1` uses all
+        available CPU cores. Forwarded to :class:`joblib.Parallel`.
 
     Returns
     -------
@@ -525,14 +525,15 @@ def compute_clustering_metrics(
 
         return result
 
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        batch_results = list(tqdm(
-            executor.map(_process_batch, range(B)),
-            total=B,
+    batch_results = Parallel(n_jobs=n_jobs)(
+        delayed(_process_batch)(i)
+        for i in tqdm(
+            range(B),
             leave=False,
             colour="cyan",
             desc="Computing clustering metrics 📊",
-        ))
+        )
+    )
 
     metric_keys = [
         "Completeness",
