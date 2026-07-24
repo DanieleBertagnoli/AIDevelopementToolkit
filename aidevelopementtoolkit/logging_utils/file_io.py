@@ -3,6 +3,8 @@ import io
 import os
 import json
 
+from botocore.exceptions import ClientError
+
 from aidevelopementtoolkit.logging_utils.logger import get_formatted_logger
 
 import numpy as np
@@ -386,7 +388,13 @@ def file_exists(path: str) -> bool:
     if path.startswith("s3://"):
         bucket, key = parse_s3_path(path)
         client = create_s3_client()
-        return read_s3_object(client=client, bucket=bucket, key=key) is not None
+        try:
+            client.head_object(Bucket=bucket, Key=key)
+            return True
+        except ClientError as e:
+            if e.response["Error"]["Code"] in ("404", "NoSuchKey"):
+                return False
+            raise
 
     else:
         return os.path.exists(path)
