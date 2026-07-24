@@ -12,4 +12,6 @@ preprocessing
     Data transformation and preprocessing utilities.
 pydantic_utils
     Utilities for extracting and mutating fields on Pydantic models.
+statistics
+    Utilities for computing data statistics.
 """

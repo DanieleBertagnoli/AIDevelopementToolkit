@@ -16,4 +16,6 @@ plotly_utils
     Plotly plotting convenience utilities.
 printing_utils
     Convenience functions for printing and formatting.
+boto3_utils
+    Utilities for interacting with AWS S3 using boto3.
 """
