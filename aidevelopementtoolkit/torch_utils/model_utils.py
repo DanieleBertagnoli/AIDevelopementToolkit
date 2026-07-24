@@ -136,7 +136,7 @@ def load_model(
 
 def export_to_onnx(
         model: Type[nn.Module],
-        input_shape: List[Tuple[int, ...]],
+        dummy_input: List[torch.Tensor],
         input_names: List[str],
         output_names: List[str],
         export_path: str,
@@ -153,11 +153,11 @@ def export_to_onnx(
     model : Type[nn.Module]
         PyTorch model to export.
 
-    input_shape : List[Tuple[int, ...]]
-        Input tensor shapes excluding the batch dimension.
+    dummy_input : List[torch.Tensor]
+        List of dummy input tensors to be passed to the model.
 
     input_names : List[str]
-        Names assigned to ONNX input tensors. Must match `input_shape`.
+        Names assigned to ONNX input tensors. Must match the order of `dummy_input`.
 
     output_names : List[str]
         Names assigned to ONNX output tensors.
@@ -183,7 +183,7 @@ def export_to_onnx(
     >>> model = torch.nn.Linear(10, 2)
     >>> export_to_onnx(
     ...     model=model,
-    ...     input_shape=[(10,)],
+    ...     dummy_input=[torch.randn(1, 10)],
     ...     input_names=["features"],
     ...     output_names=["prediction"],
     ...     export_path="model.onnx",
@@ -193,16 +193,15 @@ def export_to_onnx(
     :func:`run_onnx`.
     """
 
-    if len(input_shape) != len(input_names):
-        logger.error("The number of input shapes must match the number of input names.")
+    if len(dummy_input) != len(input_names):
+        logger.error("The number of dummy inputs must match the number of input names.")
         raise ValueError()
 
     model.eval()
 
-    dummy_input = tuple([torch.randn((1, *shape)) for shape in input_shape])
     torch.onnx.export(
         model, 
-        dummy_input, 
+        tuple(dummy_input), 
         export_path, 
         opset_version=opset_version,
         input_names=input_names,
