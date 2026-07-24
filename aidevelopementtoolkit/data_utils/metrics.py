@@ -1,8 +1,10 @@
+import os
 from typing import Dict, Optional, Tuple
 
 from aidevelopementtoolkit.logging_utils.logger import get_formatted_logger
 import numpy as np
 from scipy.spatial.distance import cdist
+from joblib import Parallel, delayed
 from tqdm import tqdm
 from sklearn.metrics import (
     confusion_matrix,
@@ -372,6 +374,7 @@ def compute_clustering_metrics(
         padding_mask: np.ndarray,
         embeddings: Optional[np.ndarray] = None,
         metric: str = "euclidean",
+        n_jobs: int = -1,
     ) -> Tuple[Dict[str, np.ndarray], Dict[str, float]]:
     """Compute clustering metrics for one or more sequences.
 
@@ -415,6 +418,10 @@ def compute_clustering_metrics(
     metric : str, default="euclidean"
         Distance metric forwarded to :func:`cluster_distance_stats`.
         Ignored when `embeddings` is `None`.
+
+    n_jobs : int, default=-1
+        Number of parallel workers for batch processing. `-1` uses all
+        available CPU cores. Forwarded to :class:`joblib.Parallel`.
 
     Returns
     -------
@@ -483,39 +490,21 @@ def compute_clustering_metrics(
 
     B, T = predictions.shape
 
-    non_averaged = {
-        "Completeness": np.full(B, np.nan),
-        "Homogeneity": np.full(B, np.nan),
-        "V-Measure Score": np.full(B, np.nan),
-        "Fowlkes-Mallows Score": np.full(B, np.nan),
-        "Elements Like Me Score": np.full(B, np.nan),
-    }
-
-    if use_embeddings:
-        non_averaged["Intra-Cluster Distance"] = np.full(B, np.nan)
-        non_averaged["Inter-Cluster Distance"] = np.full(B, np.nan)
-
-    for batch_idx in tqdm(
-        range(B),
-        leave=False,
-        colour="cyan",
-        desc="Computing clustering metrics 📊",
-    ):
+    def _process_batch(batch_idx: int) -> Dict[str, float]:
+        result: Dict[str, float] = {}
 
         valid = ~padding_mask[batch_idx]
-
         if not np.any(valid):
-            continue
+            return result
 
         pred = predictions[batch_idx][valid]
         gt = labels[batch_idx][valid]
 
-        # At least two elements are required for pair-based clustering metrics.
         if pred.size < 2:
-            continue
+            return result
 
-        non_averaged["Fowlkes-Mallows Score"][batch_idx] = fowlkes_mallows_score(gt, pred)
-        non_averaged["Elements Like Me Score"][batch_idx] = _elm_score(pred, gt)
+        result["Fowlkes-Mallows Score"] = fowlkes_mallows_score(gt, pred)
+        result["Elements Like Me Score"] = _elm_score(pred, gt)
 
         if use_embeddings:
             emb = embeddings[batch_idx][valid]
@@ -524,19 +513,43 @@ def compute_clustering_metrics(
                 cluster_ids=pred,
                 metric=metric,
             )
-            non_averaged["Intra-Cluster Distance"][batch_idx] = intra_d
-            non_averaged["Inter-Cluster Distance"][batch_idx] = inter_d
+            result["Intra-Cluster Distance"] = intra_d
+            result["Inter-Cluster Distance"] = inter_d
 
         n_pred_clusters = np.unique(pred).size
         n_gt_clusters = np.unique(gt).size
 
-        # Degenerate clusterings (only one predicted or one ground-truth cluster)
-        # are excluded from the averaged Homogeneity, Completeness and
-        # V-Measure statistics for this evaluation protocol.
         if n_pred_clusters > 1 and n_gt_clusters > 1:
-            non_averaged["Completeness"][batch_idx] = completeness_score(gt, pred)
-            non_averaged["Homogeneity"][batch_idx] = homogeneity_score(gt, pred)
-            non_averaged["V-Measure Score"][batch_idx] = v_measure_score(gt, pred)
+            result["Completeness"] = completeness_score(gt, pred)
+            result["Homogeneity"] = homogeneity_score(gt, pred)
+            result["V-Measure Score"] = v_measure_score(gt, pred)
+
+        return result
+
+    batch_results = Parallel(n_jobs=n_jobs)(
+        delayed(_process_batch)(i)
+        for i in tqdm(
+            range(B),
+            leave=False,
+            colour="cyan",
+            desc="Computing clustering metrics 📊",
+        )
+    )
+
+    metric_keys = [
+        "Completeness",
+        "Homogeneity",
+        "V-Measure Score",
+        "Fowlkes-Mallows Score",
+        "Elements Like Me Score",
+    ]
+    if use_embeddings:
+        metric_keys += ["Intra-Cluster Distance", "Inter-Cluster Distance"]
+
+    non_averaged = {k: np.full(B, np.nan) for k in metric_keys}
+    for batch_idx, result in enumerate(batch_results):
+        for k, v in result.items():
+            non_averaged[k][batch_idx] = v
 
     averaged = {
         metric: float(np.nanmean(values))
@@ -580,29 +593,25 @@ def _elm_score(
     if N == 0:
         return np.nan
 
-    f1_scores = np.empty(N, dtype=float)
+    # Vectorized pairwise comparison — avoids the O(N) Python loop.
+    # same_pred[i, j] = True iff predictions[i] == predictions[j]
+    # same_true[i, j] = True iff labels[i]      == labels[j]
+    same_pred = predictions[:, None] == predictions[None, :]  # (N, N)
+    same_true = labels[:, None] == labels[None, :]            # (N, N)
 
-    for i in range(N):
+    # Exclude self-comparisons (diagonal)
+    np.fill_diagonal(same_pred, False)
+    np.fill_diagonal(same_true, False)
 
-        pred_cluster = np.flatnonzero(predictions == predictions[i])
-        true_cluster = np.flatnonzero(labels == labels[i])
+    tp = (same_pred & same_true).sum(axis=1).astype(np.float64)   # (N,)
+    fp = (same_pred & ~same_true).sum(axis=1).astype(np.float64)  # (N,)
+    fn = (~same_pred & same_true).sum(axis=1).astype(np.float64)  # (N,)
 
-        # Remove the element itself
-        pred_others = pred_cluster[pred_cluster != i]
-        true_others = true_cluster[true_cluster != i]
+    pred_others_empty = same_pred.sum(axis=1) == 0
+    true_others_empty = same_true.sum(axis=1) == 0
+    both_empty = pred_others_empty & true_others_empty
 
-        tp = len(np.intersect1d(pred_others, true_others))
-        fp = len(np.setdiff1d(pred_others, true_others))
-        fn = len(np.setdiff1d(true_others, pred_others))
-
-        # F1 (paper Eq. 3 with modified TP)
-        if len(pred_others) == 0 and len(true_others) == 0:
-            f1 = 1.0
-        elif tp == 0:
-            f1 = 0.0
-        else:
-            f1 = tp / (tp + 0.5 * (fp + fn))
-
-        f1_scores[i] = f1
+    denom = tp + 0.5 * (fp + fn)
+    f1_scores = np.where(both_empty, 1.0, np.where(tp == 0, 0.0, tp / denom))
 
     return float(np.mean(f1_scores))

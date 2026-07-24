@@ -76,6 +76,7 @@ def start_mlflow_run(experiment_name: str, mlflow_kwargs: Dict[str, Any]) -> Non
             "MLFLOW_TRACKING_PASSWORD",
             "MLFLOW_TRACKING_SERVER_CERT_PATH",
             "MLFLOW_ENDPOINT_URL",
+            "MLFLOW_S3_ENDPOINT_URL"
         ]
 
         for env_var in needed_env_vars:
