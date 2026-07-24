@@ -13,7 +13,7 @@ from aidevelopementtoolkit.logging_utils.logger import get_formatted_logger
 logger = get_formatted_logger(name=__name__, level="ERROR")
 
 def save_model(
-        model: Type[nn.Module],
+        model: nn.Module,
         model_configs: Dict[str, Any],
         checkpoint_dir: str,
     ) -> None:
@@ -25,7 +25,7 @@ def save_model(
 
     Parameters
     ----------
-    model : Type[nn.Module]
+    model : nn.Module
         The PyTorch model to save.
 
     model_configs : Dict[str, Any]
@@ -71,10 +71,10 @@ def save_model(
 
 
 def load_model(
-        model_class: Type[nn.Module],
+        model_class: nn.Module,
         checkpoint_dir: str,
         map_location: str = "cpu",
-    ) -> Type[nn.Module]:
+    ) -> nn.Module:
     """Load a PyTorch model checkpoint.
 
     The model class must accept the parameters stored in
@@ -82,7 +82,7 @@ def load_model(
 
     Parameters
     ----------
-    model_class : Type[nn.Module]
+    model_class : nn.Module
         Model class used to recreate the architecture.
 
     checkpoint_dir : str
@@ -93,7 +93,7 @@ def load_model(
 
     Returns
     -------
-    Type[nn.Module]
+    nn.Module
         Reconstructed model with loaded weights.
 
     Examples
@@ -129,13 +129,13 @@ def load_model(
         logger.error(f"Model weights file '{model_path}' does not exist.")
         raise FileNotFoundError()
     
-    model: Type[nn.Module] = model_class(**load_file(model_configs_path))
+    model: nn.Module = model_class(**load_file(model_configs_path))
     model.load_state_dict(torch.load(model_path, map_location=map_location))
     return model
 
 
 def export_to_onnx(
-        model: Type[nn.Module],
+        model: nn.Module,
         dummy_input: List[torch.Tensor],
         input_names: List[str],
         output_names: List[str],
@@ -150,7 +150,7 @@ def export_to_onnx(
 
     Parameters
     ----------
-    model : Type[nn.Module]
+    model : nn.Module
         PyTorch model to export.
 
     dummy_input : List[torch.Tensor]
@@ -281,7 +281,7 @@ def run_onnx(
 
 
 def print_model_summary(
-        model: Type[nn.Module],
+        model: nn.Module,
         input_shape: Tuple[int, ...],
     ) -> None:
     """Print a summary of a PyTorch model.
@@ -291,7 +291,7 @@ def print_model_summary(
 
     Parameters
     ----------
-    model : Type[nn.Module]
+    model : nn.Module
         PyTorch model to summarize.
 
     input_shape : Tuple[int, ...]
