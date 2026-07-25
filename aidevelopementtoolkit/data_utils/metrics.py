@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Literal, Optional, Tuple
 
 from aidevelopementtoolkit.logging_utils.logger import get_formatted_logger
 import numpy as np
@@ -372,7 +372,7 @@ def compute_clustering_metrics(
         labels: np.ndarray,
         padding_mask: np.ndarray,
         embeddings: Optional[np.ndarray] = None,
-        metric: str = "euclidean",
+        distance_metrics: Optional[List[Literal["euclidean", "cosine", "manhattan"]]] = None,
         n_jobs: int = -1,
     ) -> Tuple[Dict[str, np.ndarray], Dict[str, float]]:
     """Compute clustering metrics for one or more sequences.
@@ -385,8 +385,11 @@ def compute_clustering_metrics(
     - V-Measure Score
     - Fowlkes-Mallows Score
     - Elements Like Me (ELM) Score
-    - Intra-Cluster Distance (only when `embeddings` is provided)
-    - Inter-Cluster Distance (only when `embeddings` is provided)
+    - For each metric `m` in `distance_metrics` (requires `embeddings`):
+      - GT Intra-cluster `m` distance
+      - GT Inter-cluster `m` distance
+      - Predicted Intra-cluster `m` distance
+      - Predicted Inter-cluster `m` distance
 
     The first four metrics are computed through `sklearn.metrics` (https://scikit-learn.org/stable/api/sklearn.metrics.html).
     The ELM score is computed by following the paper: https://link.springer.com/article/10.1007/s10791-024-09436-7.
@@ -414,9 +417,13 @@ def compute_clustering_metrics(
         `(B, T, D)` where `D` is the embedding dimensionality. When
         `None` the distance metrics are omitted from the output.
 
-    metric : str, default="euclidean"
-        Distance metric forwarded to :func:`cluster_distance_stats`.
-        Ignored when `embeddings` is `None`.
+    distance_metrics : Optional[List[Literal["euclidean", "cosine", "manhattan"]]], default=None
+        Distance metrics to be used for intra/inter cluster distance
+        computation. For each metric `m`, the keys
+        `"GT Intra-cluster m distance"`, `"GT Inter-cluster m distance"`,
+        `"Predicted Intra-cluster m distance"`, and
+        `"Predicted Inter-cluster m distance"` are added to the output.
+        If `None`, no distance metrics are computed. Requires `embeddings`.
 
     n_jobs : int, default=-1
         Number of parallel workers for batch processing. `-1` uses all
@@ -451,6 +458,8 @@ def compute_clustering_metrics(
     use_embeddings = embeddings is not None
     if use_embeddings:
         embeddings = np.asarray(embeddings, dtype=np.float64)
+
+    use_distances = use_embeddings and bool(distance_metrics)
 
     if predictions.shape != labels.shape:
         logger.error(
@@ -505,15 +514,23 @@ def compute_clustering_metrics(
         result["Fowlkes-Mallows Score"] = fowlkes_mallows_score(gt, pred)
         result["Elements Like Me Score"] = _elm_score(pred, gt)
 
-        if use_embeddings:
+        if use_distances:
             emb = embeddings[batch_idx][valid]
-            intra_d, inter_d = cluster_distance_stats(
-                embeddings=emb,
-                cluster_ids=pred,
-                metric=metric,
-            )
-            result["Intra-Cluster Distance"] = intra_d
-            result["Inter-Cluster Distance"] = inter_d
+            for dist_metric in distance_metrics:
+                pred_intra_d, pred_inter_d = cluster_distance_stats(
+                    embeddings=emb,
+                    cluster_ids=pred,
+                    metric=dist_metric,
+                )
+                gt_intra_d, gt_inter_d = cluster_distance_stats(
+                    embeddings=emb,
+                    cluster_ids=gt,
+                    metric=dist_metric,
+                )
+                result[f"GT Intra-cluster {dist_metric} distance"] = gt_intra_d
+                result[f"GT Inter-cluster {dist_metric} distance"] = gt_inter_d
+                result[f"Predicted Intra-cluster {dist_metric} distance"] = pred_intra_d
+                result[f"Predicted Inter-cluster {dist_metric} distance"] = pred_inter_d
 
         n_pred_clusters = np.unique(pred).size
         n_gt_clusters = np.unique(gt).size
@@ -542,8 +559,14 @@ def compute_clustering_metrics(
         "Fowlkes-Mallows Score",
         "Elements Like Me Score",
     ]
-    if use_embeddings:
-        metric_keys += ["Intra-Cluster Distance", "Inter-Cluster Distance"]
+    if use_distances:
+        for dist_metric in distance_metrics:
+            metric_keys += [
+                f"GT Intra-cluster {dist_metric} distance",
+                f"GT Inter-cluster {dist_metric} distance",
+                f"Predicted Intra-cluster {dist_metric} distance",
+                f"Predicted Inter-cluster {dist_metric} distance",
+            ]
 
     non_averaged = {k: np.full(B, np.nan) for k in metric_keys}
     for batch_idx, result in enumerate(batch_results):
@@ -551,8 +574,8 @@ def compute_clustering_metrics(
             non_averaged[k][batch_idx] = v
 
     averaged = {
-        metric: float(np.nanmean(values))
-        for metric, values in non_averaged.items()
+        key: float(np.nanmean(values))
+        for key, values in non_averaged.items()
     }
 
     return non_averaged, averaged
