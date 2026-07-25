@@ -557,7 +557,7 @@ def compute_clustering_metrics(
         "Homogeneity",
         "V-Measure Score",
         "Fowlkes-Mallows Score",
-        "Elements Like Me Score",
+        "ELM Score",
     ]
     if use_distances:
         for dist_metric in distance_metrics:
