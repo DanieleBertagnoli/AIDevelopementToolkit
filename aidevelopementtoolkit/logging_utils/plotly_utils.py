@@ -6,9 +6,9 @@ import plotly.graph_objects as go
 from aidevelopementtoolkit.logging_utils.logger import get_formatted_logger
 import mlflow
 
+from aidevelopementtoolkit.general_utils import check_shape
 
-import numpy as np
-import plotly.graph_objects as go
+logger = get_formatted_logger(name=__name__, level="ERROR")
 
 def plot_heatmap(
         data: np.ndarray,
@@ -88,13 +88,9 @@ def plot_heatmap(
     ...     )
     """
 
-    logger = get_formatted_logger(name=__name__, level="ERROR")
-
     data = np.asarray(data, dtype=np.float32)
 
-    if data.ndim != 2:
-        logger.error(f"Expected a 2D matrix, got {data.shape}")
-        raise ValueError()
+    check_shape(data, (-1, -1))
 
     if zrange is not None:
         zmin, zmax = zrange
@@ -265,34 +261,16 @@ def plot_scatter(
     ...     )
     """
 
-    logger = get_formatted_logger(name=__name__, level="ERROR")
-
     x = np.asarray(x)
     y = np.asarray(y)
 
-    if x.ndim != 1 or y.ndim != 1:
-        logger.error(
-            "The given `x` and `y` must have shape `(N,)`. "
-            f"Received {x.shape} and {y.shape}."
-        )
-        raise ValueError()
-
-    if x.shape != y.shape:
-        logger.error(
-            "The given `x` and `y` have different shapes: "
-            f"{x.shape} vs {y.shape}."
-        )
-        raise ValueError()
+    check_shape(x, (-1,))
+    check_shape(y, x.shape)
 
     if labels is not None:
         labels = np.asarray(labels)
 
-        if labels.shape != x.shape:
-            logger.error(
-                "The given `labels` must have shape `(N,)`. "
-                f"Received {labels.shape}."
-            )
-            raise ValueError()
+        check_shape(labels, x.shape)
 
     fig = go.Figure()
 
@@ -470,15 +448,9 @@ def plot_histogram(
     ...     )
     """
 
-    logger = get_formatted_logger(name=__name__, level="ERROR")
-
     x = np.asarray(x)
 
-    if x.ndim != 1:
-        logger.error(
-            f"The given `x` must have shape `(N,)`. Received {x.shape}."
-        )
-        raise ValueError()
+    check_shape(x, (-1))
 
     marker_kwargs = dict(opacity=opacity)
     if color is not None:

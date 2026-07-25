@@ -1,6 +1,8 @@
 from typing import Dict, List, Literal, Optional, Tuple
 
+from aidevelopementtoolkit.general_utils import check_shape
 from aidevelopementtoolkit.logging_utils.logger import get_formatted_logger
+
 import numpy as np
 from scipy.spatial.distance import cdist
 from sklearn.utils.parallel import Parallel, delayed
@@ -72,20 +74,7 @@ def compute_classification_metrics(confusion_matrix: np.ndarray) -> Tuple[Dict[s
 
     confusion_matrix = np.asarray(confusion_matrix, dtype=np.float64,)
 
-    if confusion_matrix.ndim != 2:
-        logger.error(
-            "The given confusion matrix must be a 2-dimensional square matrix. "
-            f"Received shape {confusion_matrix.shape}."
-        )
-        raise ValueError()
-
-    if confusion_matrix.shape[0] != confusion_matrix.shape[1]:
-        logger.error(
-            "The given confusion matrix must be square. "
-            f"Received shape {confusion_matrix.shape}."
-        )
-        raise ValueError()
-
+    check_shape(confusion_matrix, (confusion_matrix.shape[0], confusion_matrix.shape[1]))
 
     num_classes = confusion_matrix.shape[0]
 
@@ -210,13 +199,7 @@ def compute_confusion_matrix(
     predictions = np.asarray(predictions, dtype=np.int64)
     labels = np.asarray(labels, dtype=np.int64)
 
-    if predictions.shape != labels.shape:
-        logger.error(
-            "The given `predictions` and `labels` have different shapes: "
-            f"{predictions.shape} vs {labels.shape}"
-        )
-        raise ValueError()
-
+    check_shape(labels, predictions.shape)
 
     if padding_mask is not None:
 
@@ -323,19 +306,9 @@ def cluster_distance_stats(
     embeddings = np.asarray(embeddings, dtype=np.float64)
     cluster_ids = np.asarray(cluster_ids, dtype=np.int64)
 
-    if embeddings.ndim != 2:
-        logger.error(
-            "The given `embeddings` must be a 2-D array with shape `(N, D)`. "
-            f"Received shape {embeddings.shape}."
-        )
-        raise ValueError()
-
-    if cluster_ids.ndim != 1 or cluster_ids.shape[0] != embeddings.shape[0]:
-        logger.error(
-            "The given `cluster_ids` must be a 1-D array with length N matching "
-            f"`embeddings`. Received shape {cluster_ids.shape} vs {embeddings.shape}."
-        )
-        raise ValueError()
+    check_shape(embeddings, (-1, -1))
+    N, E = embeddings.shape
+    check_shape(cluster_ids, (N,))
 
     unique_ids = np.unique(cluster_ids)
 
@@ -455,48 +428,29 @@ def compute_clustering_metrics(
     labels = np.asarray(labels, dtype=np.int64)
     padding_mask = np.asarray(padding_mask, dtype=bool)
 
+    check_shape(predictions, [(-1,), (-1, -1)])
+    check_shape(labels, predictions.shape)
+    check_shape(labels, padding_mask.shape)
+
+    # Add batch axis
+    if predictions.ndim == 1:
+            predictions = predictions[None, :]
+            labels = labels[None, :]
+            padding_mask = padding_mask[None, :]
+
+    B, T = predictions.shape
+
     use_embeddings = embeddings is not None
     if use_embeddings:
         embeddings = np.asarray(embeddings, dtype=np.float64)
 
     use_distances = use_embeddings and bool(distance_metrics)
 
-    if predictions.shape != labels.shape:
-        logger.error(
-            "The given `predictions` and `labels` have different shapes: "
-            f"{predictions.shape} vs {labels.shape}"
-        )
-        raise ValueError()
+    # Add batch axis
+    if use_embeddings and embeddings.ndim == 2:
+        embeddings = embeddings[None, :]
 
-    if predictions.shape != padding_mask.shape:
-        logger.error(
-            "The given `predictions` and `padding_mask` have different shapes: "
-            f"{predictions.shape} vs {padding_mask.shape}"
-        )
-        raise ValueError()
-
-    if predictions.ndim == 1:
-        predictions = predictions[None, :]
-        labels = labels[None, :]
-        padding_mask = padding_mask[None, :]
-        if use_embeddings:
-            embeddings = embeddings[None, :]
-
-    if predictions.ndim != 2:
-        logger.error(
-            "The given arrays must have shape `(T,)` or `(B, T)`. "
-            f"Received {predictions.shape}."
-        )
-        raise ValueError()
-
-    if use_embeddings and embeddings.ndim != 3:
-        logger.error(
-            "The given `embeddings` must have shape `(T, D)` or `(B, T, D)`. "
-            f"Received {embeddings.shape}."
-        )
-        raise ValueError()
-
-    B, T = predictions.shape
+    check_shape(embeddings, (B, T, -1))
 
     def _process_batch(batch_idx: int) -> Dict[str, float]:
         result: Dict[str, float] = {}

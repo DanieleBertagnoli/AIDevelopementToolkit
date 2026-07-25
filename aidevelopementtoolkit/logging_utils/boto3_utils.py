@@ -171,6 +171,7 @@ def write_s3_object(
         except Exception as e:
             logger.error(f"The S3 upload of {key} in the bucket {bucket} as failed. \n{e}")
 
+
 def parse_s3_path(path: str) -> Tuple[str, str]:
     """Parse an S3 path into bucket and key.
 

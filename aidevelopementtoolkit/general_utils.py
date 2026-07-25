@@ -94,10 +94,11 @@ def check_shape(
     """
     # Type check
     if not isinstance(array, (np.ndarray, torch.Tensor)):
-        Logger.error(
+        logger.error(
             f"Invalid type: expected `np.ndarray` or `torch.Tensor`, "
             f"got `{type(array).__name__}`"
         )
+        raise ValueError()
 
     actual_shape = tuple(array.shape)
 
