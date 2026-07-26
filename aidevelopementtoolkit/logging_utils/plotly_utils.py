@@ -448,20 +448,26 @@ def plot_histogram(
     ...     )
     """
 
-    x = np.asarray(x)
+    x = np.asarray(x, dtype=float)
 
     check_shape(x, (-1,))
 
-    marker_kwargs = dict(opacity=opacity)
-    if color is not None:
-        marker_kwargs["color"] = color
+    valid_x = x[~np.isnan(x)]
+
+    counts, bin_edges = np.histogram(valid_x, bins=nbins if nbins is not None else "auto")
+    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+    bin_width = bin_edges[1] - bin_edges[0]
 
     fig = go.Figure(
-        data=go.Histogram(
-            x=x,
-            nbinsx=nbins,
-            marker=marker_kwargs,
-            hovertemplate="Value: %{x}<br>Count: %{y}<extra></extra>",
+        data=go.Bar(
+            x=bin_centers,
+            y=counts,
+            width=bin_width * 0.95,
+            marker=dict(
+                color=color if color is not None else "skyblue",
+                line=dict(color="black", width=1),
+                opacity=opacity,
+            ),
         )
     )
 
