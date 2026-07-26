@@ -466,7 +466,7 @@ def compute_clustering_metrics(
             return result
 
         result["Fowlkes-Mallows Score"] = fowlkes_mallows_score(gt, pred)
-        result["Elements Like Me Score"] = _elm_score(pred, gt)
+        result["ELM Score"] = _elm_score(pred, gt)
 
         if use_distances:
             emb = embeddings[batch_idx][valid]
