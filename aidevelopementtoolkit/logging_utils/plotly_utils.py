@@ -450,7 +450,7 @@ def plot_histogram(
 
     x = np.asarray(x)
 
-    check_shape(x, (-1))
+    check_shape(x, (-1,))
 
     marker_kwargs = dict(opacity=opacity)
     if color is not None:
