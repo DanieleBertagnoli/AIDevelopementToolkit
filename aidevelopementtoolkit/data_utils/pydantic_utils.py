@@ -83,7 +83,10 @@ def get_field_value(
     'Rome'
     """
     head, _, tail = field_path.partition(".")
-    value = getattr(model, head)
+    if isinstance(model, (list, tuple)):
+        value = model[int(head)]
+    else:
+        value = getattr(model, head)
     if tail:
         return get_field_value(value, tail)
     return value
