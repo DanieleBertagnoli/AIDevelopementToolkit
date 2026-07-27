@@ -134,6 +134,12 @@ def set_field_value(
     """
     head, _, tail = field_path.partition(".")
     if tail:
-        set_field_value(getattr(model, head), tail, value)
+        if isinstance(model, (list, tuple)):
+            set_field_value(model[int(head)], tail, value)
+        else:
+            set_field_value(getattr(model, head), tail, value)
     else:
-        setattr(model, head, value)
+        if isinstance(model, (list, tuple)):
+            model[int(head)] = value
+        else:
+            setattr(model, head, value)
