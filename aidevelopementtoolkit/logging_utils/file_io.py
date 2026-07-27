@@ -31,6 +31,46 @@ def _get_extension(path: str) -> str:
     return ext
 
 
+def convert_to_serializable_data(data: Any) -> Any:
+    """
+    Recursively convert non-serializable objects to standard Python types.
+
+    Handles numpy arrays and scalars, and torch tensors (if available).
+    Recurses into dicts, lists, and tuples, preserving the original structure.
+
+    Parameters
+    ----------
+    data : Any
+        Data to convert.
+
+    Returns
+    -------
+    Any
+        The same structure with numpy/torch types replaced by standard Python types.
+    """
+    try:
+        import torch
+        if isinstance(data, torch.Tensor):
+            return data.detach().cpu().tolist()
+    except ImportError:
+        pass
+
+    if isinstance(data, np.ndarray):
+        return data.tolist()
+
+    if isinstance(data, np.generic):
+        return data.item()
+
+    if isinstance(data, dict):
+        return {k: convert_to_serializable_data(v) for k, v in data.items()}
+
+    if isinstance(data, (list, tuple)):
+        converted = [convert_to_serializable_data(item) for item in data]
+        return type(data)(converted)
+
+    return data
+
+
 def _serialize_data(data: Any, ext: str) -> bytes:
     """
     Serialize data into bytes according to the file extension.
@@ -67,6 +107,8 @@ def _serialize_data(data: Any, ext: str) -> bytes:
             fmt = "JPEG"
         data.save(buffer, format=fmt)
         return buffer.getvalue()
+
+    data = convert_to_serializable_data(data)
 
     if ext == ".json":
         return json.dumps(data, indent=4).encode("utf-8")
