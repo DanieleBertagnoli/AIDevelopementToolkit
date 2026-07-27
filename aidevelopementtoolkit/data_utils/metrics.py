@@ -143,7 +143,7 @@ def compute_confusion_matrix(
         predictions: np.ndarray,
         labels: np.ndarray,
         num_classes: int,
-        padding_mask: np.ndarray | None = None,
+        padding_mask: Optional[np.ndarray] = None,
     ) -> np.ndarray:
     """Compute the confusion matrix from predictions and labels.
 
@@ -217,7 +217,6 @@ def compute_confusion_matrix(
 
         predictions = predictions[valid]
         labels = labels[valid]
-
 
     # Flatten all dimensions
     predictions = predictions.reshape(-1)
@@ -343,7 +342,7 @@ def cluster_distance_stats(
 def compute_clustering_metrics(
         predictions: np.ndarray,
         labels: np.ndarray,
-        padding_mask: np.ndarray,
+        padding_mask: Optional[np.ndarray] = None,
         embeddings: Optional[np.ndarray] = None,
         distance_metrics: Optional[List[Literal["euclidean", "cosine", "manhattan"]]] = None,
         n_jobs: int = -1,
@@ -381,8 +380,9 @@ def compute_clustering_metrics(
     labels : np.ndarray
         Ground-truth cluster labels. Same shape as `predictions`.
 
-    padding_mask : np.ndarray
+    padding_mask : Optional[np.ndarray], default=None
         Boolean array where `True` indicates padding. Same shape as `predictions`.
+        When set to `None`, no padding is applied and all elements are considered valid.
 
     embeddings : np.ndarray, default=None
         Point embeddings used to compute distance-based statistics via
@@ -426,6 +426,9 @@ def compute_clustering_metrics(
 
     predictions = np.asarray(predictions, dtype=np.int64)
     labels = np.asarray(labels, dtype=np.int64)
+    if padding_mask is None:
+        padding_mask = np.zeros_like(labels, dtype=bool)
+
     padding_mask = np.asarray(padding_mask, dtype=bool)
 
     check_shape(predictions, [(-1,), (-1, -1)])
