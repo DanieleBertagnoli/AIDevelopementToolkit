@@ -452,8 +452,7 @@ def compute_clustering_metrics(
     # Add batch axis
     if use_embeddings and embeddings.ndim == 2:
         embeddings = embeddings[None, :]
-
-    check_shape(embeddings, (B, T, -1))
+        check_shape(embeddings, (B, T, -1))
 
     def _process_batch(batch_idx: int) -> Dict[str, float]:
         result: Dict[str, float] = {}
