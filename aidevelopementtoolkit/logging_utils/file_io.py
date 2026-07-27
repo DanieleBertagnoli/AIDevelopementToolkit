@@ -31,7 +31,7 @@ def _get_extension(path: str) -> str:
     return ext
 
 
-def convert_to_serializable_data(data: Any) -> Any:
+def convert_to_serializable_data(data: Any, keep_list: bool = True) -> Any:
     """
     Recursively convert non-serializable objects to standard Python types.
 
@@ -43,29 +43,66 @@ def convert_to_serializable_data(data: Any) -> Any:
     data : Any
         Data to convert.
 
+    keep_list : bool, default=True
+        Controls how single-element arrays and tensors are converted.
+
+        - If `True` (default), arrays are always converted to lists, so a
+          single-element array becomes a one-element list (e.g. `[42]`).
+        - If `False`, single-element arrays and tensors are unwrapped to
+          their scalar value (e.g. `42`).
+
     Returns
     -------
     Any
         The same structure with numpy/torch types replaced by standard Python types.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> convert_to_serializable_data(np.array([1, 2, 3]))
+    [1, 2, 3]
+
+    >>> convert_to_serializable_data(np.array([42]))
+    [42]
+
+    >>> convert_to_serializable_data(np.array([42]), keep_list=False)
+    42
+
+    >>> convert_to_serializable_data(np.float32(3.14))
+    3.14
+
+    >>> convert_to_serializable_data({"a": np.array([1, 2]), "b": np.int64(7)})
+    {'a': [1, 2], 'b': 7}
+
+    >>> convert_to_serializable_data({"a": np.array([1, 2]), "b": np.int64(7)}, keep_list=False)
+    {'a': [1, 2], 'b': 7}
+
+    >>> convert_to_serializable_data(np.array([[1, 2], [3, 4]]), keep_list=False)
+    [[1, 2], [3, 4]]
     """
     try:
         import torch
         if isinstance(data, torch.Tensor):
-            return data.detach().cpu().tolist()
+            result = data.detach().cpu().tolist()
+            if not keep_list and data.numel() == 1:
+                return result[0] if isinstance(result, list) else result
+            return result
     except ImportError:
         pass
 
     if isinstance(data, np.ndarray):
+        if not keep_list and data.size == 1:
+            return data.flat[0].item()
         return data.tolist()
 
     if isinstance(data, np.generic):
         return data.item()
 
     if isinstance(data, dict):
-        return {k: convert_to_serializable_data(v) for k, v in data.items()}
+        return {k: convert_to_serializable_data(v, keep_list=keep_list) for k, v in data.items()}
 
     if isinstance(data, (list, tuple)):
-        converted = [convert_to_serializable_data(item) for item in data]
+        converted = [convert_to_serializable_data(item, keep_list=keep_list) for item in data]
         return type(data)(converted)
 
     return data
