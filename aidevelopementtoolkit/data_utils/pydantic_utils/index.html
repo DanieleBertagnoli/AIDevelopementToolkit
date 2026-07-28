@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>pydantic_utils - AIDevelopementToolkit</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var properdocs_page_name = "pydantic_utils";
+        var properdocs_page_input_path = "aidevelopementtoolkit/data_utils/pydantic_utils.md";
+        var properdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> AIDevelopementToolkit
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">Home</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">AIDevelopementToolkit</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../../"></a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" >data_utils</a>
+    <ul class="current">
+                <li class="toctree-l2"><a class="reference internal" href="../">Index</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../metrics/">metrics</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../preprocessing/">preprocessing</a>
+                </li>
+                <li class="toctree-l2 current"><a class="reference internal current" href="#">pydantic_utils</a>
+    <ul class="current">
+    <li class="toctree-l3"><a class="reference internal" href="#aidevelopementtoolkit.data_utils.pydantic_utils.models_to_numpy">models_to_numpy</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#aidevelopementtoolkit.data_utils.pydantic_utils.get_field_value">get_field_value</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#aidevelopementtoolkit.data_utils.pydantic_utils.set_field_value">set_field_value</a>
+    </li>
+    </ul>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../statistics/">statistics</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../general_utils/">general_utils</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >logging_utils</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../logging_utils/">Index</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../logging_utils/boto3_utils/">boto3_utils</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../logging_utils/file_io/">file_io</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../logging_utils/logger/">logger</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../logging_utils/mlflow_utils/">mlflow_utils</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../logging_utils/plotly_utils/">plotly_utils</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../logging_utils/printing_utils/">printing_utils</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >torch_utils</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../torch_utils/">Index</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../torch_utils/EarlyStopper/">EarlyStopper</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../torch_utils/distributed_torch_utils/">distributed_torch_utils</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../torch_utils/model_utils/">model_utils</a>
+                </li>
+    </ul>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">AIDevelopementToolkit</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">AIDevelopementToolkit</li>
+          <li class="breadcrumb-item">data_utils</li>
+      <li class="breadcrumb-item active">pydantic_utils</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/DanieleBertagnoli/AIDevelopementToolkit/edit/master/docs/aidevelopementtoolkit/data_utils/pydantic_utils.py">Edit on AIDevelopementToolkit</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <div class="doc doc-object doc-module">
+
+
+
+<h2 id="aidevelopementtoolkit.data_utils.pydantic_utils" class="doc doc-heading">
+            <code>aidevelopementtoolkit.data_utils.pydantic_utils</code>
+
+
+</h2>
+
+    <div class="doc doc-contents first">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="aidevelopementtoolkit.data_utils.pydantic_utils.models_to_numpy" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">models_to_numpy</span><span class="p">(</span><span class="n">models</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">BaseModel</span><span class="p">],</span> <span class="n">fields</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Extract numeric fields from a sequence of Pydantic models into a NumPy array.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>models</code></b>
+                  (<code><span title="typing.Iterable">Iterable</span>[<span title="pydantic.BaseModel">BaseModel</span>]</code>)
+              –
+              <div class="doc-md-description">
+                <p>An iterable of Pydantic model instances to extract values from.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>fields</code></b>
+                  (<code><span title="typing.Sequence">Sequence</span>[<span title="str">str</span>]</code>)
+              –
+              <div class="doc-md-description">
+                <p>Ordered sequence of dot-separated field paths (case-sensitive) to
+extract from each model. Each path is resolved via <code>get_field_value</code>.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Returns:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+              –
+              <div class="doc-md-description">
+                <p>Array containing the extracted values. Shape <code>(N, F)</code>:
+- <code>N</code>: The number of models in the input iterable.
+- <code>F</code>: The number of requested fields.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Point</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">x</span><span class="p">:</span> <span class="nb">float</span>
+<span class="gp">... </span>    <span class="n">y</span><span class="p">:</span> <span class="nb">float</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">points</span> <span class="o">=</span> <span class="p">[</span><span class="n">Point</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="mf">2.0</span><span class="p">),</span> <span class="n">Point</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="mf">3.0</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="mf">4.0</span><span class="p">)]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">models_to_numpy</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">])</span>
+<span class="go">array([[1., 2.],</span>
+<span class="go">       [3., 4.]], dtype=float32)</span>
+</code></pre></div>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>aidevelopementtoolkit/data_utils/pydantic_utils.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">models_to_numpy</span><span class="p">(</span><span class="n">models</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">BaseModel</span><span class="p">],</span> <span class="n">fields</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extract numeric fields from a sequence of Pydantic models into a NumPy array.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    models : Iterable[BaseModel]</span>
+<span class="sd">        An iterable of Pydantic model instances to extract values from.</span>
+
+<span class="sd">    fields : Sequence[str]</span>
+<span class="sd">        Ordered sequence of dot-separated field paths (case-sensitive) to</span>
+<span class="sd">        extract from each model. Each path is resolved via `get_field_value`.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    np.ndarray</span>
+<span class="sd">        Array containing the extracted values. Shape `(N, F)`:</span>
+<span class="sd">        - `N`: The number of models in the input iterable.</span>
+<span class="sd">        - `F`: The number of requested fields.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; class Point(BaseModel):</span>
+<span class="sd">    ...     x: float</span>
+<span class="sd">    ...     y: float</span>
+<span class="sd">    &gt;&gt;&gt; points = [Point(x=1.0, y=2.0), Point(x=3.0, y=4.0)]</span>
+<span class="sd">    &gt;&gt;&gt; models_to_numpy(points, [&quot;x&quot;, &quot;y&quot;])</span>
+<span class="sd">    array([[1., 2.],</span>
+<span class="sd">           [3., 4.]], dtype=float32)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">fields</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Expected at least one field name.&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">()</span>
+
+    <span class="n">rows</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">[</span><span class="n">get_field_value</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">field</span><span class="p">)</span> <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="n">models</span>
+    <span class="p">]</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="aidevelopementtoolkit.data_utils.pydantic_utils.get_field_value" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">get_field_value</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">field_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Retrieve a nested field value from a Pydantic model by dot-separated path.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>model</code></b>
+                  (<code><span title="pydantic.BaseModel">BaseModel</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>The Pydantic model instance to traverse.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>field_path</code></b>
+                  (<code><span title="str">str</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Dot-separated path to the target field (case-sensitive).
+For example, <code>"address.city"</code> retrieves <code>model.address.city</code>.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Returns:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+                  <code><span title="typing.Any">Any</span></code>
+              –
+              <div class="doc-md-description">
+                <p>The value at the specified field path.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Address</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">city</span><span class="p">:</span> <span class="nb">str</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+<span class="gp">... </span>    <span class="n">address</span><span class="p">:</span> <span class="n">Address</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">user</span> <span class="o">=</span> <span class="n">User</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;Alice&quot;</span><span class="p">,</span> <span class="n">address</span><span class="o">=</span><span class="n">Address</span><span class="p">(</span><span class="n">city</span><span class="o">=</span><span class="s2">&quot;Rome&quot;</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">get_field_value</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+<span class="go">&#39;Alice&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">get_field_value</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="s2">&quot;address.city&quot;</span><span class="p">)</span>
+<span class="go">&#39;Rome&#39;</span>
+</code></pre></div>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>aidevelopementtoolkit/data_utils/pydantic_utils.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span>
+<span class="normal">58</span>
+<span class="normal">59</span>
+<span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span>
+<span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span>
+<span class="normal">69</span>
+<span class="normal">70</span>
+<span class="normal">71</span>
+<span class="normal">72</span>
+<span class="normal">73</span>
+<span class="normal">74</span>
+<span class="normal">75</span>
+<span class="normal">76</span>
+<span class="normal">77</span>
+<span class="normal">78</span>
+<span class="normal">79</span>
+<span class="normal">80</span>
+<span class="normal">81</span>
+<span class="normal">82</span>
+<span class="normal">83</span>
+<span class="normal">84</span>
+<span class="normal">85</span>
+<span class="normal">86</span>
+<span class="normal">87</span>
+<span class="normal">88</span>
+<span class="normal">89</span>
+<span class="normal">90</span>
+<span class="normal">91</span>
+<span class="normal">92</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_field_value</span><span class="p">(</span>
+        <span class="n">model</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">,</span>
+        <span class="n">field_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Retrieve a nested field value from a Pydantic model by dot-separated path.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    model : BaseModel</span>
+<span class="sd">        The Pydantic model instance to traverse.</span>
+
+<span class="sd">    field_path : str</span>
+<span class="sd">        Dot-separated path to the target field (case-sensitive).</span>
+<span class="sd">        For example, `&quot;address.city&quot;` retrieves `model.address.city`.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Any</span>
+<span class="sd">        The value at the specified field path.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; class Address(BaseModel):</span>
+<span class="sd">    ...     city: str</span>
+<span class="sd">    &gt;&gt;&gt; class User(BaseModel):</span>
+<span class="sd">    ...     name: str</span>
+<span class="sd">    ...     address: Address</span>
+<span class="sd">    &gt;&gt;&gt; user = User(name=&quot;Alice&quot;, address=Address(city=&quot;Rome&quot;))</span>
+<span class="sd">    &gt;&gt;&gt; get_field_value(user, &quot;name&quot;)</span>
+<span class="sd">    &#39;Alice&#39;</span>
+<span class="sd">    &gt;&gt;&gt; get_field_value(user, &quot;address.city&quot;)</span>
+<span class="sd">    &#39;Rome&#39;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">head</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">tail</span> <span class="o">=</span> <span class="n">field_path</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">model</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">head</span><span class="p">)]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">head</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">tail</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">get_field_value</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">tail</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">value</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="aidevelopementtoolkit.data_utils.pydantic_utils.set_field_value" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">set_field_value</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">field_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Set a nested field value on a Pydantic model by dot-separated path.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>model</code></b>
+                  (<code><span title="pydantic.BaseModel">BaseModel</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>The Pydantic model instance to modify.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>field_path</code></b>
+                  (<code><span title="str">str</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Dot-separated path to the target field (case-sensitive).
+For example, <code>"address.city"</code> sets <code>model.address.city</code>.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>value</code></b>
+                  (<code><span title="typing.Any">Any</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>The value to assign to the target field.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Raises:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+                  <code><span title="AttributeError">AttributeError</span></code>
+              –
+              <div class="doc-md-description">
+                <p>If any segment of the path does not exist on the current model.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Address</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">city</span><span class="p">:</span> <span class="nb">str</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+<span class="gp">... </span>    <span class="n">address</span><span class="p">:</span> <span class="n">Address</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">user</span> <span class="o">=</span> <span class="n">User</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;Alice&quot;</span><span class="p">,</span> <span class="n">address</span><span class="o">=</span><span class="n">Address</span><span class="p">(</span><span class="n">city</span><span class="o">=</span><span class="s2">&quot;Rome&quot;</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">set_field_value</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="s2">&quot;Bob&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">user</span><span class="o">.</span><span class="n">name</span>
+<span class="go">&#39;Bob&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">set_field_value</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="s2">&quot;address.city&quot;</span><span class="p">,</span> <span class="s2">&quot;Milan&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">user</span><span class="o">.</span><span class="n">address</span><span class="o">.</span><span class="n">city</span>
+<span class="go">&#39;Milan&#39;</span>
+</code></pre></div>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>aidevelopementtoolkit/data_utils/pydantic_utils.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 95</span>
+<span class="normal"> 96</span>
+<span class="normal"> 97</span>
+<span class="normal"> 98</span>
+<span class="normal"> 99</span>
+<span class="normal">100</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
+<span class="normal">116</span>
+<span class="normal">117</span>
+<span class="normal">118</span>
+<span class="normal">119</span>
+<span class="normal">120</span>
+<span class="normal">121</span>
+<span class="normal">122</span>
+<span class="normal">123</span>
+<span class="normal">124</span>
+<span class="normal">125</span>
+<span class="normal">126</span>
+<span class="normal">127</span>
+<span class="normal">128</span>
+<span class="normal">129</span>
+<span class="normal">130</span>
+<span class="normal">131</span>
+<span class="normal">132</span>
+<span class="normal">133</span>
+<span class="normal">134</span>
+<span class="normal">135</span>
+<span class="normal">136</span>
+<span class="normal">137</span>
+<span class="normal">138</span>
+<span class="normal">139</span>
+<span class="normal">140</span>
+<span class="normal">141</span>
+<span class="normal">142</span>
+<span class="normal">143</span>
+<span class="normal">144</span>
+<span class="normal">145</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">set_field_value</span><span class="p">(</span>
+        <span class="n">model</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">,</span>
+        <span class="n">field_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Set a nested field value on a Pydantic model by dot-separated path.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    model : BaseModel</span>
+<span class="sd">        The Pydantic model instance to modify.</span>
+
+<span class="sd">    field_path : str</span>
+<span class="sd">        Dot-separated path to the target field (case-sensitive).</span>
+<span class="sd">        For example, `&quot;address.city&quot;` sets `model.address.city`.</span>
+
+<span class="sd">    value : Any</span>
+<span class="sd">        The value to assign to the target field.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    AttributeError</span>
+<span class="sd">        If any segment of the path does not exist on the current model.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; class Address(BaseModel):</span>
+<span class="sd">    ...     city: str</span>
+<span class="sd">    &gt;&gt;&gt; class User(BaseModel):</span>
+<span class="sd">    ...     model_config = ConfigDict(frozen=False)</span>
+<span class="sd">    ...     name: str</span>
+<span class="sd">    ...     address: Address</span>
+<span class="sd">    &gt;&gt;&gt; user = User(name=&quot;Alice&quot;, address=Address(city=&quot;Rome&quot;))</span>
+<span class="sd">    &gt;&gt;&gt; set_field_value(user, &quot;name&quot;, &quot;Bob&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; user.name</span>
+<span class="sd">    &#39;Bob&#39;</span>
+<span class="sd">    &gt;&gt;&gt; set_field_value(user, &quot;address.city&quot;, &quot;Milan&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; user.address.city</span>
+<span class="sd">    &#39;Milan&#39;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">head</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">tail</span> <span class="o">=</span> <span class="n">field_path</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">tail</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+            <span class="n">set_field_value</span><span class="p">(</span><span class="n">model</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">head</span><span class="p">)],</span> <span class="n">tail</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">set_field_value</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">head</span><span class="p">),</span> <span class="n">tail</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+            <span class="n">model</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">head</span><span class="p">)]</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">head</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../preprocessing/" class="btn btn-neutral float-left" title="preprocessing"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../statistics/" class="btn btn-neutral float-right" title="statistics">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://properdocs.org/">ProperDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/DanieleBertagnoli/AIDevelopementToolkit" class="fa fa-code-fork" style="color: #fcfcfc"> AIDevelopementToolkit</a>
+        </span>
+    
+    
+      <span><a href="../preprocessing/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../statistics/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
