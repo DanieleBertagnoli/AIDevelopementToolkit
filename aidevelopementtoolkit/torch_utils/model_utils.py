@@ -280,27 +280,20 @@ def run_onnx(
     return outputs
 
 
-def print_model_summary(
-        model: nn.Module,
-        input_shape: Tuple[int, ...],
-    ) -> None:
+def print_model_summary(model: nn.Module) -> None:
     """Print a summary of a PyTorch model.
 
-    The summary includes layer information, parameter counts, and tensor
-    shapes using `torchsummary`.
+    The summary includes the model architecture and total/trainable
+    parameter counts.
 
     Parameters
     ----------
     model : nn.Module
         PyTorch model to summarize.
 
-    input_shape : Tuple[int, ...]
-        Input tensor shape excluding the batch dimension.
-
-
     Examples
     --------
-    Print the summary of a model receiving 10 features:
+    Print the summary of a model:
 
     >>> import torch
     >>> model = torch.nn.Sequential(
@@ -308,14 +301,46 @@ def print_model_summary(
     ...     torch.nn.ReLU(),
     ...     torch.nn.Linear(5, 1),
     ... )
-    >>> print_model_summary(
-    ...     model=model,
-    ...     input_shape=(10,),
-    ... )
+    >>> print_model_summary(model=model)
     """
 
-    # Add batch dimension to input shape
-    input_shape_with_batch = (1, *input_shape)
+    col_layer = 40
+    col_params = 15
+    col_trainable = 12
 
-    # Print model summary
-    summary(model, input_size=input_shape_with_batch[1:], device="cpu")
+    header = f"{'Layer (type)':<{col_layer}} {'Param #':>{col_params}} {'Trainable':>{col_trainable}}"
+    separator = "-" * len(header)
+
+    print(separator)
+    print(header)
+    print("=" * len(header))
+
+    total_params = 0
+    trainable_params = 0
+
+    for name, module in model.named_modules():
+        # Skip the top-level container itself
+        if name == "":
+            continue
+
+        # Only leaf modules (no children) to avoid double-counting
+        if list(module.children()):
+            continue
+
+        layer_type = type(module).__name__
+        label = f"{name} ({layer_type})"
+
+        layer_total = sum(p.numel() for p in module.parameters())
+        layer_trainable = sum(p.numel() for p in module.parameters() if p.requires_grad)
+
+        total_params += layer_total
+        trainable_params += layer_trainable
+
+        trainable_flag = "Yes" if layer_trainable > 0 else "No"
+        print(f"{label:<{col_layer}} {layer_total:>{col_params},} {trainable_flag:>{col_trainable}}")
+
+    print("=" * len(header))
+    print(f"{'Total params':<{col_layer}} {total_params:>{col_params},}")
+    print(f"{'Trainable params':<{col_layer}} {trainable_params:>{col_params},}")
+    print(f"{'Non-trainable params':<{col_layer}} {total_params - trainable_params:>{col_params},}")
+    print(separator)

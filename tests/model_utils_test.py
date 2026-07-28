@@ -1,9 +1,9 @@
-import logging
 import os
 import shutil
 import tempfile
 
 import numpy as np
+import torch
 from torchvision.models import resnet18
 
 from aidevelopementtoolkit.logging_utils.logger import get_formatted_logger
@@ -33,7 +33,7 @@ if __name__ == "__main__":
         save_model(model, model_config, checkpoint_dir)
 
         assert os.path.exists(os.path.join(checkpoint_dir, "weights.pt"))
-        assert os.path.exists(os.path.join(checkpoint_dir, "model_configs.json"))
+        assert os.path.exists(os.path.join(checkpoint_dir, "configs.json"))
 
         logger.info("✓ save_model() passed")
 
@@ -52,7 +52,7 @@ if __name__ == "__main__":
 
         export_to_onnx(
             model=loaded_model,
-            input_shape=[(3, 224, 224)],
+            dummy_input=[torch.randn(1, 3, 224, 224)],
             input_names=["image"],
             output_names=["logits"],
             export_path=onnx_path,
@@ -83,10 +83,7 @@ if __name__ == "__main__":
         # Test print_model_summary()
         logger.info("Testing print_model_summary()")
 
-        print_model_summary(
-            loaded_model,
-            (3, 224, 224),
-        )
+        print_model_summary(loaded_model)
 
         logger.info("✓ print_model_summary() passed")
 
