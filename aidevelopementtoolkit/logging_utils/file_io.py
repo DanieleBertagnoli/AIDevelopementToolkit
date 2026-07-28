@@ -323,6 +323,7 @@ def save_file(
 def load_file(
         path: str,
         return_type: Optional[Literal["numpy", "pandas", "pil"]] = "pandas",
+        process_rank: int = 0,
     ) -> Any:
     """
     Loads a file. The format is deduced from the file extension.
@@ -348,6 +349,11 @@ def load_file(
 
         - CSV: `"pandas"` (default) returns a `pandas.DataFrame`; `"numpy"` returns a `numpy.ndarray`.
         - Images: `"pil"` (default for images) returns a `PIL.Image.Image`; `"numpy"` returns a `numpy.ndarray`.
+
+    process_rank : int, default=0
+        Rank of the current process (for distributed setups).
+        This it used to determine the tqdm position, so that multiple processes
+        can display progress bars without overlapping.
 
     Returns
     -------
@@ -386,6 +392,7 @@ def load_file(
                 client=client,
                 bucket=bucket,
                 key=key,
+                process_rank=process_rank,
             )
         )
 
