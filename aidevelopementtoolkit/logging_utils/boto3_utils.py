@@ -62,6 +62,7 @@ def read_s3_object(
         client,
         bucket: str,
         key: str,
+        process_rank: int = 0,
     ) -> bytes:
     """
     Download an S3 object and return its content as bytes.
@@ -79,6 +80,11 @@ def read_s3_object(
 
     key : str
         Key (path) of the object inside the bucket.
+
+    process_rank : int, default=0
+        Rank of the current process (for distributed setups). 
+        This it used to determine the tqdm position, so that multiple processes 
+        can display progress bars without overlapping.
 
     Returns
     -------
@@ -109,6 +115,7 @@ def read_s3_object(
         desc=f"Reading {os.path.basename(key)} from S3",
         colour="yellow",
         leave=False,
+        position=process_rank,
     ) as progress:
         client.download_fileobj(
             bucket,
