@@ -129,6 +129,7 @@ def plot_heatmap(
         title=title,
         xaxis_title=xaxis_title,
         yaxis_title=yaxis_title,
+        plot_bgcolor="white",
     )
 
     fig.update_xaxes(
