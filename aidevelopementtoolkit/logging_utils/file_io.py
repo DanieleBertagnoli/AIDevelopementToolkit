@@ -324,6 +324,7 @@ def load_file(
         path: str,
         return_type: Optional[Literal["numpy", "pandas", "pil"]] = "pandas",
         process_rank: int = 0,
+        header: Optional[int] = None,
     ) -> Any:
     """
     Loads a file. The format is deduced from the file extension.
@@ -354,6 +355,13 @@ def load_file(
         Rank of the current process (for distributed setups).
         This it used to determine the tqdm position, so that multiple processes
         can display progress bars without overlapping.
+
+    header : Optional[int], default=None
+        Only relevant for CSV files. Row number to use as column names.
+        If `None`, the CSV is treated as having no header row.
+        When `return_type` is `"numpy"`, the header row is skipped and not
+        included in the output. When `return_type` is `"pandas"`, the header
+        is passed directly to `pandas.read_csv`. Ignored for non-CSV files.
 
     Returns
     -------
@@ -416,7 +424,7 @@ def load_file(
 
     elif ext == ".csv":
 
-        df = pd.read_csv(file_data)
+        df = pd.read_csv(file_data, header=header)
 
         if return_type == "numpy":
             return df.to_numpy()
