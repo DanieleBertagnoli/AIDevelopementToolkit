@@ -95,8 +95,8 @@ def plot_heatmap(
     if zrange is not None:
         zmin, zmax = zrange
     else:
-        data_min = np.min(data)
-        data_max = np.max(data)
+        data_min = np.nanmin(data)
+        data_max = np.nanmax(data)
 
         if data_min == data_max:
             zmin = data_min - 1
