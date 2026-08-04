@@ -247,6 +247,7 @@ def cluster_distance_stats(
         embeddings: np.ndarray,
         cluster_ids: np.ndarray,
         metric: str = "euclidean",
+        device: str = "cpu",
     ) -> Tuple[float, float]:
     """Compute intra- and inter-cluster distance statistics.
 
@@ -273,7 +274,12 @@ def cluster_distance_stats(
         Each element is the cluster id of the corresponding embedding.
 
     metric : str, default="euclidean"
-        Distance metric forwarded to `scipy.spatial.distance.cdist`.
+        Distance metric forwarded to `scipy.spatial.distance.cdist` (CPU) or
+        `cuml.metrics.pairwise_distances` (CUDA).
+
+    device : str, default="cpu"
+        Compute backend. `"cpu"` uses numpy/scipy; `"cuda"` uses
+        cupy and cuML and requires a RAPIDS installation.
 
     Returns
     -------
@@ -311,30 +317,56 @@ def cluster_distance_stats(
 
     unique_ids = np.unique(cluster_ids)
 
-    # Intra cluster distances
-    intra_means = []
-    for cid in unique_ids:
-        mask = cluster_ids == cid
-        pts = embeddings[mask]
-        if pts.shape[0] < 2:
-            continue
-        dists = cdist(pts, pts, metric=metric)
-        # upper triangle only (exclude diagonal zeros)
-        upper = dists[np.triu_indices(pts.shape[0], k=1)]
-        intra_means.append(upper.mean())
+    if device == "cuda":
+        import cupy as cp
+        from cuml.metrics import pairwise_distances as gpu_pairwise_distances
 
-    intra_d = float(np.mean(intra_means)) if intra_means else float(np.nan)
+        gpu_embeddings = cp.asarray(embeddings)
 
-    # Inter cluster distances
-    inter_distances = []
-    for i, cid_a in enumerate(unique_ids):
-        for cid_b in unique_ids[i + 1:]:
-            pts_a = embeddings[cluster_ids == cid_a]
-            pts_b = embeddings[cluster_ids == cid_b]
-            dists = cdist(pts_a, pts_b, metric=metric)
-            inter_distances.append(dists.mean())
+        intra_means = []
+        for cid in unique_ids:
+            pts = gpu_embeddings[cluster_ids == cid]
+            if pts.shape[0] < 2:
+                continue
+            dists = gpu_pairwise_distances(pts, metric=metric)
+            upper = dists[cp.triu_indices(pts.shape[0], k=1)]
+            intra_means.append(float(upper.mean()))
 
-    inter_d = float(np.mean(inter_distances)) if inter_distances else float(np.nan)
+        intra_d = float(np.mean(intra_means)) if intra_means else float(np.nan)
+
+        inter_distances = []
+        for i, cid_a in enumerate(unique_ids):
+            for cid_b in unique_ids[i + 1:]:
+                pts_a = gpu_embeddings[cluster_ids == cid_a]
+                pts_b = gpu_embeddings[cluster_ids == cid_b]
+                dists = gpu_pairwise_distances(pts_a, pts_b, metric=metric)
+                inter_distances.append(float(dists.mean()))
+
+        inter_d = float(np.mean(inter_distances)) if inter_distances else float(np.nan)
+
+    else:
+        intra_means = []
+        for cid in unique_ids:
+            mask = cluster_ids == cid
+            pts = embeddings[mask]
+            if pts.shape[0] < 2:
+                continue
+            dists = cdist(pts, pts, metric=metric)
+            # upper triangle only (exclude diagonal zeros)
+            upper = dists[np.triu_indices(pts.shape[0], k=1)]
+            intra_means.append(upper.mean())
+
+        intra_d = float(np.mean(intra_means)) if intra_means else float(np.nan)
+
+        inter_distances = []
+        for i, cid_a in enumerate(unique_ids):
+            for cid_b in unique_ids[i + 1:]:
+                pts_a = embeddings[cluster_ids == cid_a]
+                pts_b = embeddings[cluster_ids == cid_b]
+                dists = cdist(pts_a, pts_b, metric=metric)
+                inter_distances.append(dists.mean())
+
+        inter_d = float(np.mean(inter_distances)) if inter_distances else float(np.nan)
 
     return intra_d, inter_d
 
@@ -346,6 +378,7 @@ def compute_clustering_metrics(
         embeddings: Optional[np.ndarray] = None,
         distance_metrics: Optional[List[Literal["euclidean", "cosine", "manhattan"]]] = None,
         n_jobs: int = -1,
+        device: str = "cpu",
     ) -> Tuple[Dict[str, np.ndarray], Dict[str, float]]:
     """Compute clustering metrics for one or more sequences.
 
@@ -401,6 +434,12 @@ def compute_clustering_metrics(
     n_jobs : int, default=-1
         Number of parallel workers for batch processing. `-1` uses all
         available CPU cores. Forwarded to :class:`joblib.Parallel`.
+        Ignored when `device="cuda"` (the GPU handles parallelism internally).
+
+    device : str, default="cpu"
+        Compute backend. `"cpu"` uses sklearn/scipy with joblib parallelism;
+        `"cuda"` uses cuML metrics and cupy-based distances and requires a
+        RAPIDS installation.
 
     Returns
     -------
@@ -454,6 +493,22 @@ def compute_clustering_metrics(
         embeddings = embeddings[None, :]
         check_shape(embeddings, (B, T, -1))
 
+    if device == "cuda":
+        from cuml.metrics.cluster import (
+            completeness_score as _completeness_score,
+            homogeneity_score as _homogeneity_score,
+            v_measure_score as _v_measure_score,
+        )
+        try:
+            from cuml.metrics.cluster import fowlkes_mallows_score as _fowlkes_mallows_score
+        except ImportError:
+            _fowlkes_mallows_score = fowlkes_mallows_score
+    else:
+        _completeness_score = completeness_score
+        _homogeneity_score = homogeneity_score
+        _v_measure_score = v_measure_score
+        _fowlkes_mallows_score = fowlkes_mallows_score
+
     def _process_batch(batch_idx: int) -> Dict[str, float]:
         result: Dict[str, float] = {}
 
@@ -467,7 +522,7 @@ def compute_clustering_metrics(
         if pred.size < 2:
             return result
 
-        result["Fowlkes-Mallows Score"] = fowlkes_mallows_score(gt, pred)
+        result["Fowlkes-Mallows Score"] = _fowlkes_mallows_score(gt, pred)
         result["ELM Score"] = _elm_score(pred, gt)
 
         if use_distances:
@@ -477,11 +532,13 @@ def compute_clustering_metrics(
                     embeddings=emb,
                     cluster_ids=pred,
                     metric=dist_metric,
+                    device=device,
                 )
                 gt_intra_d, gt_inter_d = cluster_distance_stats(
                     embeddings=emb,
                     cluster_ids=gt,
                     metric=dist_metric,
+                    device=device,
                 )
                 result[f"GT Intra-cluster {dist_metric} distance"] = gt_intra_d
                 result[f"GT Inter-cluster {dist_metric} distance"] = gt_inter_d
@@ -492,21 +549,33 @@ def compute_clustering_metrics(
         n_gt_clusters = np.unique(gt).size
 
         if n_pred_clusters > 1 and n_gt_clusters > 1:
-            result["Completeness"] = completeness_score(gt, pred)
-            result["Homogeneity"] = homogeneity_score(gt, pred)
-            result["V-Measure Score"] = v_measure_score(gt, pred)
+            result["Completeness"] = _completeness_score(gt, pred)
+            result["Homogeneity"] = _homogeneity_score(gt, pred)
+            result["V-Measure Score"] = _v_measure_score(gt, pred)
 
         return result
 
-    batch_results = Parallel(n_jobs=n_jobs)(
-        delayed(_process_batch)(i)
-        for i in tqdm(
-            range(B),
-            leave=False,
-            colour="cyan",
-            desc="Computing clustering metrics 📊",
+    # On CUDA the GPU parallelises internally; joblib workers would conflict over the CUDA context
+    if device == "cuda":
+        batch_results = [
+            _process_batch(i)
+            for i in tqdm(
+                range(B),
+                leave=False,
+                colour="cyan",
+                desc="Computing clustering metrics 📊",
+            )
+        ]
+    else:
+        batch_results = Parallel(n_jobs=n_jobs)(
+            delayed(_process_batch)(i)
+            for i in tqdm(
+                range(B),
+                leave=False,
+                colour="cyan",
+                desc="Computing clustering metrics 📊",
+            )
         )
-    )
 
     metric_keys = [
         "Completeness",
