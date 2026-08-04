@@ -5,7 +5,10 @@ from aidevelopementtoolkit.logging_utils.logger import get_formatted_logger
 
 import numpy as np
 from scipy.spatial.distance import cdist
-from joblib import Parallel, delayed
+# Defensive fallback: silence the notice even if some caller still mixes joblib/sklearn delayed
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning, module=r"sklearn\.utils\.parallel")
+from sklearn.utils.parallel import Parallel, delayed
 from tqdm import tqdm
 from sklearn.metrics import (
     confusion_matrix,
