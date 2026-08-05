@@ -530,7 +530,7 @@ def compute_clustering_metrics(
             non_averaged[k][batch_idx] = v
 
     averaged = {
-        key: float(np.nanmean(values))
+        key: float(np.nanmean(values)) if np.any(~np.isnan(values)) else float(np.nan)
         for key, values in non_averaged.items()
     }
 
