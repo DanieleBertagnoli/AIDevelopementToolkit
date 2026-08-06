@@ -123,9 +123,7 @@ def _main_worker(
         Kwargs to be passed to the function.
     """
 
-    # Select GPU from config
-    device_id = devices[local_rank]
-    torch.cuda.set_device(device_id)
+    torch.cuda.set_device(local_rank)
 
     # Initialize DDP process group
     dist.init_process_group(

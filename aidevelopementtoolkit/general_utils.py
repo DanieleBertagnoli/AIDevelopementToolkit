@@ -75,7 +75,7 @@ def check_shape(
 
     expected_shape : Union[Tuple[int, ...], List[Tuple[int, ...]]]
         A single expected shape or a list of acceptable shapes.
-        Use `-1` to indicate a wildcard dimension.
+        Use `-1` or `None` to indicate a wildcard dimension.
 
     Raises
     ------
@@ -98,7 +98,7 @@ def check_shape(
             f"Invalid type: expected `np.ndarray` or `torch.Tensor`, "
             f"got `{type(array).__name__}`"
         )
-        raise ValueError()
+        raise TypeError()
 
     actual_shape = tuple(array.shape)
 
@@ -114,7 +114,7 @@ def check_shape(
 
         match = True
         for a, e in zip(actual_shape, shape):
-            if e != -1 and a != e:
+            if e not in (-1, None) and a != e:
                 match = False
                 break
 

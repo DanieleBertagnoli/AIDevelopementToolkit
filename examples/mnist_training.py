@@ -24,7 +24,7 @@ Run examples:
 """
 
 import os
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Union, Optional
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -43,26 +43,43 @@ import torch.distributed as dist
 from torchvision.models import resnet50
 from torchvision.datasets import MNIST
 from torchvision import transforms
-from sklearn.metrics import confusion_matrix
 
-from aidevelopementtoolkit.general_utils import set_seed
+from aidevelopementtoolkit.general_utils import set_seed, check_shape
 from aidevelopementtoolkit.logging_utils.logger import get_formatted_logger
 from aidevelopementtoolkit.logging_utils.mlflow_utils import start_mlflow_run, save_model_checkpoint, log_run_parameters
 from aidevelopementtoolkit.torch_utils.EarlyStopper import EarlyStopper
+from aidevelopementtoolkit.torch_utils.AbstractTrainer import AbstractTrainer
+from aidevelopementtoolkit.torch_utils.AbstractValidator import AbstractValidator
 from aidevelopementtoolkit.data_utils.metrics import compute_classification_metrics, compute_confusion_matrix
 from aidevelopementtoolkit.logging_utils.plotly_utils import plot_heatmap
 from aidevelopementtoolkit.torch_utils.distributed_torch_utils import dist_barrier, get_process_rank
 
-class Validator:
+
+
+
+
+
+
+
+
+
+#################
+#               #
+#   Validator   #
+#               #
+#################
+
+class MNISTValidator(AbstractValidator):
     """Validation helper for batch-wise and epoch-wise model evaluation.
 
     Parameters
     ----------
     loss_fn : nn.Module
-        Loss function used for validation.
+        The loss function used in the validation process.
 
-    device : str
-        Device identifier used for model and tensor placement.
+    device : str or torch.device
+        The device (e.g., 'cpu' or 'cuda:0') on which the model and data will 
+        be loaded for validation.
 
     num_classes : int
         Number of classification labels.
@@ -71,16 +88,17 @@ class Validator:
     def __init__(
             self,
             loss_fn: nn.Module,
-            device: str,
+            device: Union[str, torch.device],
             num_classes: int,
         ):
 
-        self.device = device
-        self.loss_fn = loss_fn
+        super().__init__(loss_fn=loss_fn, device=device)
         self.num_classes = num_classes
 
+        self.logger = get_formatted_logger(level="ERROR")
 
-    def val_batch(
+
+    def validation_step(
             self, 
             model: nn.Module, 
             batch: Tuple[torch.Tensor, torch.Tensor]
@@ -111,8 +129,17 @@ class Validator:
                 - Batch confusion matrix (not averaged)
         """
 
+        if len(batch) != 2:
+            self.logger.error("Invalid batch: expected a tuple of (images, labels)")
+            raise ValueError()
+
         with torch.inference_mode():
             imgs, labels = batch
+
+            check_shape(imgs, (-1, 3, 224, 224))
+            B, C, H, W = imgs.shape
+            check_shape(labels, (B,))
+
             imgs = imgs.to(self.device)
             labels = labels.to(self.device).long()
 
@@ -135,19 +162,24 @@ class Validator:
         return loss.item(), batch_cm
     
 
-    def validate(self, model: nn.Module, val_dataloader: DataLoader, e: int) -> Tuple[float, Dict[str, float]]:
-        """Validate the model on the whole validation dataset.
-
+    def validate(
+            self, 
+            model: nn.Module, 
+            data_loader: torch.utils.data.DataLoader, 
+            current_epoch: int,
+        ) -> Tuple[float, Dict[str, float]]:
+        """Validate the model on the given data loader.
+        
         Parameters
         ----------
         model : nn.Module
-            Model to be validated.
+            The model to be validated.
+        
+        data_loader : torch.utils.data.DataLoader
+            The data loader providing the validation data.
 
-        val_dataloader : DataLoader
-            Validation data loader.
-
-        e : int
-            Current epoch number.
+        current_epoch : int
+            The current epoch number, which can be used for logging or checkpointing purposes.
 
         Returns
         -------
@@ -161,20 +193,24 @@ class Validator:
 
         model.eval()
         model = model.to(self.device)
+
+
+        ### Validation Loop ###
             
-        # Accumulate validation statistics across all batches.
+        # Accumulate validation statistics across all batches
         epoch_loss = torch.zeros(1, device=self.device, dtype=torch.float32)
         total_confusion_matrix = torch.zeros((self.num_classes, self.num_classes), dtype=torch.int64, device=self.device)
 
-        for batch in tqdm(val_dataloader, desc="Validating model ", unit="batch", leave=False, position=get_process_rank()):
-            batch_loss, batch_confusion_matrix = self.val_batch(model, batch)
+        for batch in tqdm(data_loader, desc="Validating model ", unit="batch", leave=False, position=get_process_rank()):
+
+            batch_loss, batch_confusion_matrix = self.validation_step(model, batch)
             epoch_loss += batch_loss
 
             # Accumulate metrics
             total_confusion_matrix += batch_confusion_matrix
             
         # Average metrics on the num of batches
-        epoch_loss = epoch_loss / len(val_dataloader)
+        epoch_loss = epoch_loss / len(data_loader)
         
 
         ### Aggregate processes ###
@@ -184,6 +220,9 @@ class Validator:
         epoch_loss = epoch_loss.item()
 
         dist.all_reduce(total_confusion_matrix, op=dist.ReduceOp.SUM)
+
+
+        ### Metrics and Logging ###
 
         total_confusion_matrix = total_confusion_matrix.cpu().detach().numpy()
         metrics, normalized_confusion_matrix = compute_classification_metrics(total_confusion_matrix)
@@ -195,70 +234,80 @@ class Validator:
                 "MNIST Confusion Matrix",
                 "Predicted",
                 "GT",
-                f"plots/epoch_{e}.png",
+                f"plots/epoch_{current_epoch}.png",
             )
 
         return epoch_loss, metrics
+
+
+
+
+
+
+
+
+
+###############
+#             #
+#   Trainer   #
+#             #
+###############
         
 
-class Trainer:
+class MNISTTrainer(AbstractTrainer):
     """Training loop encapsulation for epoch-based model optimization.
 
     Trainer performs batch-level training, validation, metric logging, and
     checkpoint saving during training.
 
     Parameters
-    ----------
-    epochs : int
-        Number of training epochs.
-
-    patience : int
-        Number of consecutive epochs without improvement before triggering
-        early stopping.
-
-    device : str
-        Device identifier used for model and tensor placement.
-
-    optimizer : torch.optim.Optimizer
-        Optimizer class used for parameter updates.
-
-    lr : float
-        Learning rate for the optimizer.
-
-    loss_fn : nn.Module
-        Loss function used during training.
-
-    validator : Validator
-        Validation helper used for epoch validation.
-    """
-
+        ----------
+        optimizer : torch.optim.Optimizer
+            The optimizer used to update the model's parameters during training.
+        
+        loss_fn : nn.Module
+            The loss function used in the training process.
+    
+        device : str or torch.device
+            The device (e.g., 'cpu' or 'cuda:0') on which the model and data will be loaded for training.
+    
+        epochs : int
+            The number of epochs for which the model will be trained.
+        
+        validator : AbstractValidator
+            The validator used to evaluate the model's performance on the validation set.
+        
+        early_stopper : Optional[EarlyStopper]
+            The early stopper used to halt training if the model's performance stops improving.
+            It can be set to `None` if early stopping is not desired.
+            
+        checkpoint_interval : int
+            The interval (in epochs) at which to save model checkpoints.
+        """
+    
     def __init__(
             self, 
-            epochs: int, 
-            patience: int,
-            device: str,
-            optimizer: torch.optim.Optimizer,
-            lr: float,
-            loss_fn: nn.Module,
-            validator: Validator,
-        ):
+            optimizer: torch.optim.Optimizer, 
+            loss_fn: nn.Module, 
+            device: Union[str, torch.device],
+            epochs: int,
+            validator: AbstractValidator,
+            early_stopper: Optional[EarlyStopper],
+            checkpoint_interval: int,
+        ) -> None:
 
-        self.epochs = epochs
-        self.device = device
-        self.loss_fn = loss_fn
-        self.optimizer = optimizer
-        self.lr = lr
-
-        self.early_stopper = EarlyStopper(
-            delta_for_new_best=0.1,
-            delta_type="relative",
-            criterion="min",
-            patience=patience,
+        super().__init__(
+            optimizer=optimizer,
+            loss_fn=loss_fn,
+            device=device,
+            epochs=epochs,
+            validator=validator,
+            early_stopper=early_stopper,
+            checkpoint_interval=checkpoint_interval,
         )
-        self.validator = validator
 
     
-    def train_batch(
+    def training_step(
             self, 
             model: nn.Module, 
             batch: Tuple[torch.Tensor, torch.Tensor]
@@ -279,13 +328,21 @@ class Trainer:
             Training loss for the batch.
         """
 
+        if len(batch) != 2:
+            self.logger.error("Invalid batch: expected a tuple of (images, labels)")
+            raise ValueError()
+
         imgs, labels = batch
+
+        check_shape(imgs, (-1, 3, 224, 224))
+        B, C, H, W = imgs.shape
+        check_shape(labels, (B,))
+
         imgs = imgs.to(self.device)
         labels = labels.to(self.device).long()
 
-        preds = model(imgs)
-
-        loss = self.loss_fn(preds, labels)
+        preds: torch.Tensor = model(imgs)
+        loss: torch.Tensor = self.loss_fn(preds, labels)
 
         self.optimizer.zero_grad()
         loss.backward()
@@ -314,10 +371,10 @@ class Trainer:
 
         logger.info(f"[Process {rank}] Start training")
 
-        # Move the model to the target device and initialize the optimizer.
         model = model.to(self.device)
-        model = DistributedDataParallel(model, device_ids=[self.device])
-        self.optimizer = self.optimizer(model.parameters(), self.lr)
+
+
+        ### Training Loop ###
 
         for e in range(1, self.epochs+1):
 
@@ -329,8 +386,8 @@ class Trainer:
             epoch_loss = torch.zeros(1, device=self.device, dtype=torch.float32)
 
             # Loop on batches
-            for batch in tqdm(train_dataloader, desc=f"Training model. Epoch {e}/{self.epochs} ", unit="batch", leave=False, position=rank):
-                batch_loss = self.train_batch(model, batch)
+            for batch in tqdm(train_dataloader, desc=f"Training model: Epoch {e}/{self.epochs} ", unit="batch", leave=False, position=rank):
+                batch_loss = self.training_step(model, batch)
                 epoch_loss += batch_loss
             
             epoch_loss = epoch_loss / len(train_dataloader)
@@ -342,9 +399,12 @@ class Trainer:
             
             ### Validation ###
 
-            val_loss, val_metrics = self.validator.validate(model.module, val_dataloader, e)
+            val_loss, val_metrics = self.validator.validate(model, val_dataloader, e)
 
-            new_best, stop = self.early_stopper.set_epoch_loss(val_loss)
+
+            ### Checkpointing and Logging ###
+
+            is_new_best, stop = self.early_stopper.set_epoch_metric(val_loss)
 
             # Only the main process will execute
             if rank == 0:
@@ -355,16 +415,9 @@ class Trainer:
                 for k, v in val_metrics.items():
                     logger.info(f"Validation {k}: {v}")
 
-
-                ### Checkpoint ###
-
-                if new_best:
+                if is_new_best:
                     save_model_checkpoint(model.module, {}, "best")
-
                 save_model_checkpoint(model.module, {}, "last")
-
-
-                ### MLFlow logging ###
 
                 metrics = {
                     "Training Cross Entropy Loss": epoch_loss,
@@ -373,10 +426,11 @@ class Trainer:
                 }
 
                 mlflow.log_metrics(metrics=metrics, step=e)
-
-                if stop: logger.info("The early stopping has been triggered")
                 
-            if stop: return model.module
+            if stop: 
+                if get_process_rank() == 0:
+                    logger.info(f"Early stopping triggered at epoch {e}.")
+                break
 
         return model.module
 
@@ -387,6 +441,9 @@ def main(log_level: str) -> None:
     device = torch.cuda.current_device()
 
     get_formatted_logger(level=log_level)
+
+
+    ### Data Preparation ###
 
     transform = transforms.Compose([
         transforms.Resize((224,224)),
@@ -428,22 +485,28 @@ def main(log_level: str) -> None:
 
     train_loader = DataLoader(
         train_dataset,
-        batch_size=64,
+        batch_size=32,
         sampler=train_sampler,
-        num_workers=4,
     )
 
     val_loader = DataLoader(
         val_dataset,
-        batch_size=64,
+        batch_size=32,
         sampler=val_sampler,
-        num_workers=4,
     )
 
+
+    ### Model ###
+
     model = resnet50(num_classes=10)
+    model = model.to(device)
+    model = DistributedDataParallel(model, device_ids=[device])
+
+
+    ### Training Setup ###
 
     lr=0.001
-    optimizer = AdamW
+    optimizer = AdamW(params=model.parameters(), lr=lr)
     loss_fn = CrossEntropyLoss()
 
     seed = 47
@@ -452,54 +515,71 @@ def main(log_level: str) -> None:
 
     set_seed(seed)
 
-    if get_process_rank() == 0:
-
-        start_mlflow_run(
-            experiment_name="MNIST",
-            mlflow_kwargs={
-                "run_name": "ResNet50",
-                "tags": {
-                    "model": "resnet50",
-                    "pre-trained": "false",
-                },
-                "log_system_metrics": True,
-                "description": "Simple showcase on how the toolkit shall be used."
-            }
-        )
-
-        log_run_parameters(
-            {
-                "epochs": epochs,
-                "patience": patience,
-                "seed": seed,
-                "lr": lr,
-                "Dataset": "MNIST",
-                "model": "ResNet50",
-            }
-        )
-
-    validator = Validator(
+    validator = MNISTValidator(
         device=device,
         loss_fn=loss_fn,
         num_classes=10,
     )
 
-    trainer = Trainer(
-        epochs=epochs,
+    early_stopper = EarlyStopper(
+        delta_for_new_best=0.1,
+        delta_type="relative",
+        criterion="min",
         patience=patience,
-        device=device,
-        optimizer=optimizer,
-        loss_fn=loss_fn,
-        lr=lr,
-        validator=validator,
     )
 
+    trainer = MNISTTrainer(
+        optimizer=optimizer,
+        loss_fn=loss_fn,
+        device=device,
+        epochs=epochs,
+        validator=validator,
+        early_stopper=early_stopper,
+        checkpoint_interval=10,
+    )
+
+
+    ### MLFlow Logging ###
+    if get_process_rank() == 0:
+    
+            start_mlflow_run(
+                experiment_name="MNIST",
+                mlflow_kwargs={
+                    "run_name": "ResNet50",
+                    "tags": {
+                        "model": "resnet50",
+                        "pre-trained": "false",
+                    },
+                    "log_system_metrics": True,
+                    "description": "Simple showcase on how the toolkit shall be used."
+                }
+            )
+    
+            log_run_parameters(
+                {
+                    "epochs": epochs,
+                    "patience": patience,
+                    "seed": seed,
+                    "lr": lr,
+                    "Dataset": "MNIST",
+                    "model": "ResNet50",
+                }
+            )
+
+
+    ### Model Training ###
+
     model = trainer.train(model, train_loader, val_loader)
+
+
+    ### Cleanup ###
 
     if get_process_rank() == 0:
         mlflow.end_run()
 
     dist.destroy_process_group()
+
+
 
 if __name__ == "__main__":
 
