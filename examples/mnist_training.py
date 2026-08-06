@@ -577,8 +577,6 @@ def main(log_level: str) -> None:
     if get_process_rank() == 0:
         mlflow.end_run()
 
-    dist.destroy_process_group()
-
 
 
 if __name__ == "__main__":
