@@ -177,7 +177,7 @@ def log_run_parameters(
         mlflow.log_param(full_key, value)
 
 
-def save_model_checkpoint(
+def log_model_checkpoint(
         model: nn.Module, 
         config: Dict[str, Any],
         checkpoint_name: str,
@@ -198,7 +198,7 @@ def save_model_checkpoint(
 
     Examples
     --------
-    >>> save_model_checkpoint(model, {"hidden_dim": 128}, "best")
+    >>> log_model_checkpoint(model, {"hidden_dim": 128}, "best")
     """
 
     # Store in a temporary local directory

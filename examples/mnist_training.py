@@ -46,31 +46,25 @@ from torchvision import transforms
 
 from aidevelopementtoolkit.general_utils import set_seed, check_shape
 from aidevelopementtoolkit.logging_utils.logger import get_formatted_logger
-from aidevelopementtoolkit.logging_utils.mlflow_utils import start_mlflow_run, save_model_checkpoint, log_run_parameters
+from aidevelopementtoolkit.logging_utils.mlflow_utils import start_mlflow_run, log_model_checkpoint, log_run_parameters
 from aidevelopementtoolkit.torch_utils.EarlyStopper import EarlyStopper
-from aidevelopementtoolkit.torch_utils.AbstractTrainer import AbstractTrainer
-from aidevelopementtoolkit.torch_utils.AbstractValidator import AbstractValidator
+from aidevelopementtoolkit.torch_utils.AbstractTrainer import AbstractTrainer, AbstractTrainingStep
+from aidevelopementtoolkit.torch_utils.AbstractValidator import AbstractValidator, AbstractValidationStep
 from aidevelopementtoolkit.data_utils.metrics import compute_classification_metrics, compute_confusion_matrix
 from aidevelopementtoolkit.logging_utils.plotly_utils import plot_heatmap
 from aidevelopementtoolkit.torch_utils.distributed_torch_utils import dist_barrier, get_process_rank
 
 
 
-
-
-
-
-
-
-
+ 
 #################
 #               #
 #   Validator   #
 #               #
 #################
 
-class MNISTValidator(AbstractValidator):
-    """Validation helper for batch-wise and epoch-wise model evaluation.
+class MNISTValidationStep(AbstractValidationStep):
+    """Batch-level validation logic for the MNIST example.
 
     Parameters
     ----------
@@ -98,10 +92,10 @@ class MNISTValidator(AbstractValidator):
         self.logger = get_formatted_logger(level="ERROR")
 
 
-    def validation_step(
+    def __call__(
             self, 
             model: nn.Module, 
-            batch: Tuple[torch.Tensor, torch.Tensor]
+            batch: Tuple[torch.Tensor, torch.Tensor],
         ) -> Tuple[float, torch.Tensor]:
         """This function is used to validate a single batch.
 
@@ -160,7 +154,34 @@ class MNISTValidator(AbstractValidator):
         batch_cm = torch.as_tensor(batch_cm, device=self.device, dtype=torch.int64)
 
         return loss.item(), batch_cm
-    
+
+
+class MNISTValidator(AbstractValidator):
+    """Validation helper for batch-wise and epoch-wise model evaluation.
+
+    Parameters
+    ----------
+    validation_step : AbstractValidationStep
+        The validation step used to evaluate the model's performance on a single batch of data.
+
+    device : str or torch.device
+        The device (e.g., 'cpu' or 'cuda:0') on which the model and data will 
+        be loaded for validation.
+
+    num_classes : int
+        Number of classification labels.
+    """
+
+    def __init__(
+            self,
+            validation_step: AbstractValidationStep,
+            device: Union[str, torch.device],
+            num_classes: int,
+        ):
+
+        super().__init__(validation_step=validation_step, device=device)
+        self.num_classes = num_classes
+
 
     def validate(
             self, 
@@ -242,11 +263,6 @@ class MNISTValidator(AbstractValidator):
 
 
 
-
-
-
-
-
 ###############
 #             #
 #   Trainer   #
@@ -254,63 +270,36 @@ class MNISTValidator(AbstractValidator):
 ###############
         
 
-class MNISTTrainer(AbstractTrainer):
-    """Training loop encapsulation for epoch-based model optimization.
-
-    Trainer performs batch-level training, validation, metric logging, and
-    checkpoint saving during training.
+class MNISTTrainingStep(AbstractTrainingStep):
+    """Batch-level training logic for the MNIST example.
 
     Parameters
-        ----------
-        optimizer : torch.optim.Optimizer
-            The optimizer used to update the model's parameters during training.
-        
-        loss_fn : nn.Module
-            The loss function used in the training process.
-    
-        device : str or torch.device
-            The device (e.g., 'cpu' or 'cuda:0') on which the model and data will be loaded for training.
-    
-        epochs : int
-            The number of epochs for which the model will be trained.
-        
-        validator : AbstractValidator
-            The validator used to evaluate the model's performance on the validation set.
-        
-        early_stopper : Optional[EarlyStopper]
-            The early stopper used to halt training if the model's performance stops improving.
-            It can be set to `None` if early stopping is not desired.
-            
-        checkpoint_interval : int
-            The interval (in epochs) at which to save model checkpoints.
-        """
-    
+    ----------
+    optimizer : torch.optim.Optimizer
+        The optimizer used to update the model's parameters during training.
+
+    loss_fn : nn.Module
+        The loss function used in the training process.
+
+    device : str or torch.device
+        The device (e.g., 'cpu' or 'cuda:0') on which the model and data will be loaded for training.
+    """
+
     def __init__(
-            self, 
-            optimizer: torch.optim.Optimizer, 
-            loss_fn: nn.Module, 
+            self,
+            optimizer: torch.optim.Optimizer,
+            loss_fn: nn.Module,
             device: Union[str, torch.device],
-            epochs: int,
-            validator: AbstractValidator,
-            early_stopper: Optional[EarlyStopper],
-            checkpoint_interval: int,
         ) -> None:
 
-        super().__init__(
-            optimizer=optimizer,
-            loss_fn=loss_fn,
-            device=device,
-            epochs=epochs,
-            validator=validator,
-            early_stopper=early_stopper,
-            checkpoint_interval=checkpoint_interval,
-        )
+        super().__init__(optimizer=optimizer, loss_fn=loss_fn, device=device)
+        self.logger = get_formatted_logger(level="ERROR")
 
-    
-    def training_step(
+
+    def __call__(
             self, 
             model: nn.Module, 
-            batch: Tuple[torch.Tensor, torch.Tensor]
+            batch: Tuple[torch.Tensor, torch.Tensor],
         ) -> float:
         """Train the model on a single batch and return the batch loss.
 
@@ -349,9 +338,62 @@ class MNISTTrainer(AbstractTrainer):
         self.optimizer.step()
 
         return loss.item()
-    
 
-    def train(self, model: nn.Module, train_dataloader: DataLoader, val_dataloader: DataLoader) -> nn.Module:
+
+class MNISTTrainer(AbstractTrainer):
+    """Training loop encapsulation for epoch-based model optimization.
+
+    Trainer performs batch-level training, validation, metric logging, and
+    checkpoint saving during training.
+
+    Parameters
+        ----------
+        training_step : AbstractTrainingStep
+            The training step used to update the model's parameters on a single batch of data.
+    
+        device : str or torch.device
+            The device (e.g., 'cpu' or 'cuda:0') on which the model and data will be loaded for training.
+    
+        epochs : int
+            The number of epochs for which the model will be trained.
+        
+        validator : AbstractValidator
+            The validator used to evaluate the model's performance on the validation set.
+        
+        early_stopper : Optional[EarlyStopper]
+            The early stopper used to halt training if the model's performance stops improving.
+            It can be set to `None` if early stopping is not desired.
+            
+        checkpoint_interval : int
+            The interval (in epochs) at which to save model checkpoints.
+        """
+    
+    def __init__(
+            self, 
+            training_step: AbstractTrainingStep,
+            device: Union[str, torch.device],
+            epochs: int,
+            validator: AbstractValidator,
+            early_stopper: Optional[EarlyStopper],
+            checkpoint_interval: int,
+        ) -> None:
+
+        super().__init__(
+            training_step=training_step,
+            device=device,
+            epochs=epochs,
+            validator=validator,
+            early_stopper=early_stopper,
+            checkpoint_interval=checkpoint_interval,
+        )
+
+
+    def train(
+            self, 
+            model: nn.Module, 
+            train_dataloader: DataLoader, 
+            val_dataloader: DataLoader,
+        ) -> nn.Module:
         """Run the training loop for the specified number of epochs.
 
         Parameters
@@ -416,8 +458,8 @@ class MNISTTrainer(AbstractTrainer):
                     logger.info(f"Validation {k}: {v}")
 
                 if is_new_best:
-                    save_model_checkpoint(model.module, {}, "best")
-                save_model_checkpoint(model.module, {}, "last")
+                    log_model_checkpoint(model.module, {}, "best")
+                log_model_checkpoint(model.module, {}, "last")
 
                 metrics = {
                     "Training Cross Entropy Loss": epoch_loss,
@@ -515,9 +557,15 @@ def main(log_level: str) -> None:
 
     set_seed(seed)
 
-    validator = MNISTValidator(
+    validation_step = MNISTValidationStep(
         device=device,
         loss_fn=loss_fn,
+        num_classes=10,
+    )
+
+    validator = MNISTValidator(
+        validation_step=validation_step,
+        device=device,
         num_classes=10,
     )
 
@@ -528,9 +576,14 @@ def main(log_level: str) -> None:
         patience=patience,
     )
 
-    trainer = MNISTTrainer(
+    training_step = MNISTTrainingStep(
         optimizer=optimizer,
         loss_fn=loss_fn,
+        device=device,
+    )
+
+    trainer = MNISTTrainer(
+        training_step=training_step,
         device=device,
         epochs=epochs,
         validator=validator,

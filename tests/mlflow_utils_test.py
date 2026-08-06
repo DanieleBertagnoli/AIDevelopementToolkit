@@ -73,15 +73,15 @@ if __name__ == "__main__":
 
         logger.info("✓ log_run_parameters() passed")
 
-        logger.info("Testing save_model_checkpoint()")
+        logger.info("Testing log_model_checkpoint()")
 
-        save_model_checkpoint(
+        log_model_checkpoint(
             model=model,
             config=model_config,
             checkpoint_name="best",
         )
 
-        logger.info("✓ save_model_checkpoint() passed")
+        logger.info("✓ log_model_checkpoint() passed")
 
         logger.info("Testing is_numeric()")
 
