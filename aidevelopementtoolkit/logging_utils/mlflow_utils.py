@@ -1,6 +1,6 @@
 import os
 from os import environ
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 import shutil
 
 from torch import nn
@@ -11,7 +11,11 @@ from aidevelopementtoolkit.logging_utils.logger import get_formatted_logger
 from aidevelopementtoolkit.torch_utils.model_utils import save_model
 
 
-def start_mlflow_run(experiment_name: str, mlflow_kwargs: Dict[str, Any]) -> None:
+def start_mlflow_run(
+        experiment_name: str, 
+        mlflow_kwargs: Dict[str, Any],
+        run_id: Optional[str] = None,
+    ) -> None:
     """This function starts an MLflow run with the specified 
     experiment name and additional keyword arguments.
 
@@ -29,6 +33,8 @@ def start_mlflow_run(experiment_name: str, mlflow_kwargs: Dict[str, Any]) -> Non
 
     If you are using a local MLflow server (i.e., the tracking URI starts with "sqlite:///"), the function
       will create an artifacts directory in the same location as the SQLite database.
+
+    If `run_id` is provided, the existing run with that ID is resumed instead of starting a new one.
     
     Parameters
     ----------
@@ -36,7 +42,11 @@ def start_mlflow_run(experiment_name: str, mlflow_kwargs: Dict[str, Any]) -> Non
         Name of the MLflow experiment. If the experiment does not exist, it will be created.
 
     mlflow_kwargs : Dict[str, Any]
-        Additional keyword arguments to pass to `mlflow.start_run()`.
+        Additional keyword arguments to pass to `mlflow.start_run()`. These will be ignored
+        when `run_id` is provided.
+
+    run_id : Optional[str], default=None
+        If provided, resumes the existing MLflow run with this ID instead of starting a new one.
 
     Examples
     --------
@@ -53,6 +63,12 @@ def start_mlflow_run(experiment_name: str, mlflow_kwargs: Dict[str, Any]) -> Non
     ...             "description": "Simple showcase."
     ...         }
     ...     )
+
+    >>> # Resuming a previously started run
+    >>> start_mlflow_run(
+    ...         experiment_name="MNIST",
+    ...         run_id="a1b2c3d4e5f6",
+    ...     )
         
     See Also
     --------
@@ -60,6 +76,10 @@ def start_mlflow_run(experiment_name: str, mlflow_kwargs: Dict[str, Any]) -> Non
     """
 
     logger = get_formatted_logger(name="mlflow", level="ERROR")
+
+    if run_id is not None and "run_id" in mlflow_kwargs:
+        logger.error("`run_id` should not be provided in `mlflow_kwargs` when resuming a run.")
+        raise ValueError()
 
     if "MLFLOW_ENDPOINT_URL" not in environ:
         logger.error("`MLFLOW_ENDPOINT_URL` environment variable is not set.")
@@ -117,9 +137,12 @@ def start_mlflow_run(experiment_name: str, mlflow_kwargs: Dict[str, Any]) -> Non
             artifact_location=artifacts_location,
         )
 
-    # Set the experiment and start the run
+    # Set the experiment and start (or resume) the run
     mlflow.set_experiment(experiment_name)
-    mlflow.start_run(**mlflow_kwargs)
+    if run_id is not None:
+        mlflow.start_run(run_id=run_id)
+    else:
+        mlflow.start_run(**mlflow_kwargs)
 
 
 def log_run_parameters(
