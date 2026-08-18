@@ -251,3 +251,40 @@ def is_numeric(val: Any) -> bool:
         `True` if the variable is numeric, `False` otherwise.
     """
     return isinstance(val, (int, float))
+
+
+def get_resume_epoch(run_id: str, metric_key: str) -> int:
+    """
+    Determine the epoch to resume training from, based on the metric
+    history already logged for an existing MLflow run.
+
+    Parameters
+    ----------
+    run_id : str
+        ID of the MLflow run being resumed.
+
+    metric_key : str
+        Name of the metric (logged with `step=epoch`) used to infer the last
+        completed epoch.
+
+    Returns
+    -------
+    int
+        The epoch to resume training from, i.e. one past the last epoch
+        found in the run's metric history. Returns `0` if the run has no
+        history for `metric_key`.
+
+    Examples
+    --------
+    >>> get_resume_epoch("a1b2c3d4e5f6", metric_key="Training Total Loss")
+    5
+    """
+
+    mlflow.set_tracking_uri(os.environ["MLFLOW_ENDPOINT_URL"])
+    client = mlflow.tracking.MlflowClient()
+    history = client.get_metric_history(run_id, metric_key)
+
+    if not history:
+        return 0
+
+    return max(metric.step for metric in history) + 1
