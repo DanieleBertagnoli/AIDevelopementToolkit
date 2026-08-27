@@ -15,7 +15,7 @@ from PIL import Image
 from aidevelopementtoolkit.logging_utils.boto3_utils import create_s3_client, read_s3_object, write_s3_object, parse_s3_path
 
 
-_SUPPORTED_EXTENSIONS = {".json", ".yaml", ".yml", ".csv", ".npy", ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".webp"}
+_SUPPORTED_EXTENSIONS = {".json", ".yaml", ".yml", ".csv", ".npy", ".npz", ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".webp"}
 _IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".webp"}
 
 logger = get_formatted_logger(name=__name__, level="ERROR")
@@ -108,7 +108,7 @@ def convert_to_serializable_data(data: Any, keep_list: bool = True) -> Any:
     return data
 
 
-def _serialize_data(data: Any, ext: str) -> bytes:
+def _serialize_data(data: Any, ext: str, key: Optional[str] = None) -> bytes:
     """
     Serialize data into bytes according to the file extension.
 
@@ -125,9 +125,13 @@ def _serialize_data(data: Any, ext: str) -> bytes:
         - `.yaml` / `.yml`: Any object supported by `yaml.safe_dump`.
         - `.csv`: Any object convertible to a `pandas.DataFrame`.
         - `.npy`: Any object supported by `numpy.save`.
+        - `.npz`: Any object supported by `numpy.savez`, stored under `key`.
 
     ext : str
         File extension that determines the serialization format.
+
+    key : Optional[str], default=None
+        Required when `ext` is `.npz`. Name under which `data` is stored.
 
     Returns
     -------
@@ -161,6 +165,14 @@ def _serialize_data(data: Any, ext: str) -> bytes:
         np.save(buffer, data)
         return buffer.getvalue()
 
+    elif ext == ".npz":
+        if key is None:
+            logger.error("`key` must be provided when saving '.npz' files.")
+            raise ValueError()
+        buffer = io.BytesIO()
+        np.savez(buffer, **{key: data})
+        return buffer.getvalue()
+
     logger.error(f"Unsupported file extension: '{ext}'.")
     raise ValueError()
 
@@ -171,11 +183,12 @@ def save_file(
         append: bool = False,
         header: bool = False,
         index: bool = False,
+        key: Optional[str] = None,
     ) -> None:
     """
     Saves data to a file. The format is deduced from the file extension.
 
-    Supported formats: `.json`, `.yaml` / `.yml`, `.csv`, `.npy`.
+    Supported formats: `.json`, `.yaml` / `.yml`, `.csv`, `.npy`, `.npz`.
 
     Local paths are written directly to the filesystem. Paths beginning with
     `s3://` are written to an S3-compatible object store using the boto3
@@ -188,6 +201,7 @@ def save_file(
         - JSON / YAML: any JSON-serialisable object.
         - CSV: any object convertible to a `pandas.DataFrame` or a `pandas.DataFrame` itself.
         - NPY: a `numpy.ndarray`.
+        - NPZ: a `numpy.ndarray`, stored under `key`.
         - Images (`.png`, `.jpg`, `.jpeg`, `.bmp`, `.tiff`, `.webp`): a `PIL.Image.Image` or a `numpy.ndarray`.
 
     path : str
@@ -206,6 +220,7 @@ def save_file(
         - **JSON / YAML list**: extends the list.
         - **JSON / YAML dict**: updates the dict.
         - **CSV**: appends rows (no header written).
+        - **NPZ**: adds/overwrites `key` in the existing archive.
 
     header : bool, default=False
         Only relevant for CSV files. If `True`, writes column names as the first row.
@@ -215,6 +230,10 @@ def save_file(
     index : bool, default=False
         Only relevant for CSV files. Whether to write row indices.
 
+    key : Optional[str], default=None
+        Required when saving `.npz` files. Name under which `data` is stored
+        in the archive. Ignored for all other formats.
+
     Examples
     --------
     >>> save_file({"a": 1}, "./tmp.json")
@@ -222,6 +241,7 @@ def save_file(
     >>> save_file({"b": 2}, "./tmp.json", append=True)
     >>> save_file({"x": 1}, "./tmp.yaml")
     >>> save_file([{"col": 1}], "./tmp.csv")
+    >>> save_file(np.array([1, 2, 3]), "./tmp.npz", key="arr")
 
     >>> save_file(
     ...     {"a": 1},
@@ -234,15 +254,15 @@ def save_file(
     # Serialize data into bytes for S3 paths
     if path.startswith("s3://"):
 
-        bucket, key = parse_s3_path(path)
+        bucket, s3_key = parse_s3_path(path)
         client = create_s3_client()
 
-        serialized_data = _serialize_data(data, ext)
+        serialized_data = _serialize_data(data, ext, key=key)
 
         write_s3_object(
             client=client,
             bucket=bucket,
-            key=key,
+            key=s3_key,
             data=serialized_data,
         )
 
@@ -313,6 +333,21 @@ def save_file(
     elif ext == ".npy":
         np.save(path, data)
 
+    # Handle local NPZ files
+    elif ext == ".npz":
+        if key is None:
+            logger.error("`key` must be provided when saving '.npz' files.")
+            raise ValueError()
+
+        if append and os.path.exists(path):
+            with np.load(path, allow_pickle=False) as existing:
+                arrays = {k: existing[k] for k in existing.files}
+        else:
+            arrays = {}
+
+        arrays[key] = data
+        np.savez(path, **arrays)
+
     # Handle local image files
     elif ext in _IMAGE_EXTENSIONS:
         if isinstance(data, np.ndarray):
@@ -325,11 +360,12 @@ def load_file(
         return_type: Optional[Literal["numpy", "pandas", "pil"]] = "pandas",
         process_rank: int = 0,
         header: Optional[int] = None,
+        key: Optional[str] = None,
     ) -> Any:
     """
     Loads a file. The format is deduced from the file extension.
 
-    Supported formats: `.json`, `.yaml` / `.yml`, `.csv`, `.npy`.
+    Supported formats: `.json`, `.yaml` / `.yml`, `.csv`, `.npy`, `.npz`.
 
     Local paths are read directly from the filesystem. Paths beginning with
     `s3://` are read from an S3-compatible object store using the boto3
@@ -363,6 +399,10 @@ def load_file(
         included in the output. When `return_type` is `"pandas"`, the header
         is passed directly to `pandas.read_csv`. Ignored for non-CSV files.
 
+    key : Optional[str], default=None
+        Required when loading `.npz` files. Name of the array to retrieve
+        from the archive. Ignored for all other formats.
+
     Returns
     -------
     Any
@@ -383,12 +423,13 @@ def load_file(
     >>> df = load_file("./tmp.csv")
     >>> arr = load_file("./tmp.csv", return_type="numpy")
     >>> content = load_file("s3://my-bucket/data/file.json")
+    >>> arr = load_file("./tmp.npz", key="arr")
     """
 
     # Read the file into a common file-like object
     if path.startswith("s3://"):
 
-        bucket, key = parse_s3_path(path)
+        bucket, s3_key = parse_s3_path(path)
         client = create_s3_client()
 
         if file_exists(path) is False:
@@ -399,7 +440,7 @@ def load_file(
             read_s3_object(
                 client=client,
                 bucket=bucket,
-                key=key,
+                key=s3_key,
                 process_rank=process_rank,
             )
         )
@@ -438,6 +479,17 @@ def load_file(
 
     elif ext == ".npy":
         return np.load(file_data, allow_pickle=False)
+
+    elif ext == ".npz":
+        if key is None:
+            logger.error("`key` must be provided when loading '.npz' files.")
+            raise ValueError()
+
+        with np.load(file_data, allow_pickle=False) as npz:
+            if key not in npz.files:
+                logger.error(f"Key '{key}' not found in '.npz' file. Available keys: {npz.files}.")
+                raise KeyError()
+            return npz[key]
 
     elif ext in _IMAGE_EXTENSIONS:
         img = Image.open(file_data)
