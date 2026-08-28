@@ -20,9 +20,9 @@ def create_s3_client():
 
     Reads the following environment variables:
 
-    - `S3_ENDPOINT_URL` - custom endpoint URL.
-    - `AWS_ACCESS_KEY_ID` - access key ID.
-    - `AWS_SECRET_ACCESS_KEY` - secret access key.
+    - `DATASET_S3_ENDPOINT_URL` - custom endpoint URL.
+    - `DATASET_S3_AWS_ACCESS_KEY_ID` - access key ID.
+    - `DATASET_S3_AWS_SECRET_ACCESS_KEY` - secret access key.
 
     Returns
     -------
@@ -37,13 +37,13 @@ def create_s3_client():
     Examples
     --------
     >>> import os
-    >>> os.environ["S3_ENDPOINT_URL"] = "http://localhost:9000"
-    >>> os.environ["AWS_ACCESS_KEY_ID"] = "minioadmin"
-    >>> os.environ["AWS_SECRET_ACCESS_KEY"] = "minioadmin"
+    >>> os.environ["DATASET_S3_ENDPOINT_URL"] = "http://localhost:9000"
+    >>> os.environ["DATASET_S3_AWS_ACCESS_KEY_ID"] = "minioadmin"
+    >>> os.environ["DATASET_S3_AWS_SECRET_ACCESS_KEY"] = "minioadmin"
     >>> client = create_s3_client()
     """
 
-    required = ("S3_ENDPOINT_URL", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY")
+    required = ("DATASET_S3_ENDPOINT_URL", "DATASET_S3_AWS_ACCESS_KEY_ID", "DATASET_S3_AWS_SECRET_ACCESS_KEY")
     missing = [var for var in required if not os.environ.get(var)]
 
     if missing:
@@ -52,9 +52,9 @@ def create_s3_client():
 
     return boto3.client(
         "s3",
-        endpoint_url=os.environ["S3_ENDPOINT_URL"],
-        aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
-        aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
+        endpoint_url=os.environ["DATASET_S3_ENDPOINT_URL"],
+        aws_access_key_id=os.environ["DATASET_S3_AWS_ACCESS_KEY_ID"],
+        aws_secret_access_key=os.environ["DATASET_S3_AWS_SECRET_ACCESS_KEY"],
     )
 
 

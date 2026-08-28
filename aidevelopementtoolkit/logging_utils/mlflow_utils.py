@@ -30,6 +30,8 @@ def start_mlflow_run(
     - `MLFLOW_TRACKING_SERVER_CERT_PATH`
     - `MLFLOW_ENDPOINT_URL`
     - `MLFLOW_S3_ENDPOINT_URL`
+    - `MLFLOW_S3_AWS_ACCESS_KEY_ID`
+    - `MLFLOW_S3_AWS_SECRET_ACCESS_KEY`
 
     If you are using a local MLflow server (i.e., the tracking URI starts with "sqlite:///"), the function
       will create an artifacts directory in the same location as the SQLite database.
@@ -97,7 +99,9 @@ def start_mlflow_run(
             "MLFLOW_TRACKING_PASSWORD",
             "MLFLOW_TRACKING_SERVER_CERT_PATH",
             "MLFLOW_ENDPOINT_URL",
-            "MLFLOW_S3_ENDPOINT_URL"
+            "MLFLOW_S3_ENDPOINT_URL",
+            "MLFLOW_S3_AWS_ACCESS_KEY_ID",
+            "MLFLOW_S3_AWS_SECRET_ACCESS_KEY",
         ]
 
         for env_var in needed_env_vars:
