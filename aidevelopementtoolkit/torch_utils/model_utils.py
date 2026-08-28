@@ -304,17 +304,11 @@ def print_model_summary(model: nn.Module) -> None:
     >>> print_model_summary(model=model)
     """
 
-    col_layer = 40
-    col_params = 15
-    col_trainable = 12
+    header_layer = "Layer (type)"
+    header_params = "Param #"
+    header_trainable = "Trainable"
 
-    header = f"{'Layer (type)':<{col_layer}} {'Param #':>{col_params}} {'Trainable':>{col_trainable}}"
-    separator = "-" * len(header)
-
-    print(separator)
-    print(header)
-    print("=" * len(header))
-
+    rows: List[Tuple[str, int, str]] = []
     total_params = 0
     trainable_params = 0
 
@@ -337,10 +331,27 @@ def print_model_summary(model: nn.Module) -> None:
         trainable_params += layer_trainable
 
         trainable_flag = "Yes" if layer_trainable > 0 else "No"
+        rows.append((label, layer_total, trainable_flag))
+
+    summary_labels = ["Total params", "Trainable params", "Non-trainable params"]
+    summary_values = [total_params, trainable_params, total_params - trainable_params]
+
+    # Size each column to fit its widest content so long names/values never wrap
+    col_layer = max(len(header_layer), *(len(label) for label, _, _ in rows), *(len(label) for label in summary_labels))
+    col_params = max(len(header_params), *(len(f"{value:,}") for _, value, _ in rows), *(len(f"{value:,}") for value in summary_values))
+    col_trainable = max(len(header_trainable), *(len(flag) for _, _, flag in rows))
+
+    header = f"{header_layer:<{col_layer}} {header_params:>{col_params}} {header_trainable:>{col_trainable}}"
+    separator = "-" * len(header)
+
+    print(separator)
+    print(header)
+    print("=" * len(header))
+
+    for label, layer_total, trainable_flag in rows:
         print(f"{label:<{col_layer}} {layer_total:>{col_params},} {trainable_flag:>{col_trainable}}")
 
     print("=" * len(header))
-    print(f"{'Total params':<{col_layer}} {total_params:>{col_params},}")
-    print(f"{'Trainable params':<{col_layer}} {trainable_params:>{col_params},}")
-    print(f"{'Non-trainable params':<{col_layer}} {total_params - trainable_params:>{col_params},}")
+    for label, value in zip(summary_labels, summary_values):
+        print(f"{label:<{col_layer}} {value:>{col_params},}")
     print(separator)
