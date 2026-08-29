@@ -108,6 +108,9 @@ def start_mlflow_run(
             if env_var not in environ:
                 logger.error(f"`{env_var}` environment variable is not set.")
                 raise ValueError()
+
+        os.environ["AWS_ACCESS_KEY_ID"] = environ["MLFLOW_S3_AWS_ACCESS_KEY_ID"]
+        os.environ["AWS_SECRET_ACCESS_KEY"] = environ["MLFLOW_S3_AWS_SECRET_ACCESS_KEY"]
             
     # Local server
     elif mlflow_tracking_uri.startswith("sqlite:///"):
