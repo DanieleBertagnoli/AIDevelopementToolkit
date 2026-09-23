@@ -98,8 +98,8 @@ def compute_classification_metrics(confusion_matrix: np.ndarray) -> Tuple[Dict[s
     else:
 
         # Multiclass classification:
-        precisions = np.zeros(num_classes, dtype=np.float64)
-        recalls = np.zeros(num_classes, dtype=np.float64)
+        precisions = np.full(num_classes, np.nan, dtype=np.float64)
+        recalls = np.full(num_classes, np.nan, dtype=np.float64)
 
         for class_idx in range(num_classes):
 
@@ -116,8 +116,8 @@ def compute_classification_metrics(confusion_matrix: np.ndarray) -> Tuple[Dict[s
 
 
         # Macro averaging: every class has equal importance
-        precision = np.mean(precisions)
-        recall = np.mean(recalls)
+        precision = np.nanmean(precisions)
+        recall = np.nanmean(recalls)
         f1_score = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
 
 
