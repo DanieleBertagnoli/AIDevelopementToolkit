@@ -1,7 +1,8 @@
-from typing import Any, Dict, List, Tuple, Type
+from typing import Any, Dict, List, Optional, Tuple
 import os
 
 import numpy as np
+import pandas as pd
 from torchsummary import summary
 import torch as torch
 from torch import nn
@@ -9,6 +10,7 @@ import onnxruntime as ort
 
 from aidevelopementtoolkit.logging_utils.file_io import save_file, load_file
 from aidevelopementtoolkit.logging_utils.logger import get_formatted_logger
+from aidevelopementtoolkit.logging_utils.printing_utils import print_table
 
 logger = get_formatted_logger(name=__name__, level="ERROR")
 
@@ -74,6 +76,7 @@ def load_model(
         model_class: nn.Module,
         checkpoint_dir: str,
         map_location: str = "cpu",
+        configs_to_override: Optional[Dict[str, Any]] = None,
     ) -> nn.Module:
     """Load a PyTorch model checkpoint.
 
@@ -90,6 +93,11 @@ def load_model(
 
     map_location : str, default="cpu"
         Device where model weights are loaded.
+
+    configs_to_override : Optional[Dict[str, Any]], default=None
+        Configuration values that replace those saved in `configs.json` before
+        the model is initialized. Only checkpoint tensors whose names and
+        shapes match the resulting model are loaded.
 
     Returns
     -------
@@ -129,8 +137,47 @@ def load_model(
         logger.error(f"Model weights file '{model_path}' does not exist.")
         raise FileNotFoundError()
     
-    model: nn.Module = model_class(**load_file(model_configs_path))
-    model.load_state_dict(torch.load(model_path, map_location=map_location))
+    model_configs = load_file(model_configs_path)
+    if configs_to_override is not None:
+        model_configs.update(configs_to_override)
+
+    model: nn.Module = model_class(**model_configs)
+    checkpoint_state_dict = torch.load(model_path, map_location=map_location)
+    model_state_dict = model.state_dict()
+
+    compatible_state_dict = {
+        name: tensor
+        for name, tensor in checkpoint_state_dict.items()
+        if name in model_state_dict and tensor.shape == model_state_dict[name].shape
+    }
+
+
+    ### Print model table of layer status ###
+
+    rows = []
+    for name in sorted(set(checkpoint_state_dict) | set(model_state_dict)):
+        checkpoint_tensor = checkpoint_state_dict.get(name)
+        model_tensor = model_state_dict.get(name)
+
+        if name in compatible_state_dict:
+            status = "Loaded"
+        elif checkpoint_tensor is None:
+            status = "Initialized"
+        elif model_tensor is None:
+            status = "Ignored"
+        else:
+            status = "Incompatible"
+
+        rows.append({
+            "Layer": name,
+            "Checkpoint shape": None if checkpoint_tensor is None else tuple(checkpoint_tensor.shape),
+            "Model shape": None if model_tensor is None else tuple(model_tensor.shape),
+            "Status": status,
+        })
+
+    print_table(pd.DataFrame(rows).set_index("Layer"), tablefmt="simple")
+    model.load_state_dict(compatible_state_dict, strict=False)
+
     return model
 
 
