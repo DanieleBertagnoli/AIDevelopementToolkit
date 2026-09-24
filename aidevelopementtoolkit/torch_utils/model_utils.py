@@ -1,5 +1,7 @@
 from typing import Any, Dict, List, Optional, Tuple
+import inspect
 import os
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -140,6 +142,38 @@ def load_model(
     model_configs = load_file(model_configs_path)
     if configs_to_override is not None:
         model_configs.update(configs_to_override)
+
+    model_init_signature = inspect.signature(model_class)
+    accepts_arbitrary_kwargs = any(
+        parameter.kind == inspect.Parameter.VAR_KEYWORD
+        for parameter in model_init_signature.parameters.values()
+    )
+
+    if not accepts_arbitrary_kwargs:
+        accepted_kwargs = {
+            name
+            for name, parameter in model_init_signature.parameters.items()
+            if parameter.kind in {
+                inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                inspect.Parameter.KEYWORD_ONLY,
+            }
+        }
+        ignored_configs = {
+            name: value
+            for name, value in model_configs.items()
+            if name not in accepted_kwargs
+        }
+
+        if ignored_configs:
+            logger.warning(
+                f"Ignoring model config kwargs not accepted by "
+                f"{model_class.__name__}: {ignored_configs}"
+            )
+            model_configs = {
+                name: value
+                for name, value in model_configs.items()
+                if name in accepted_kwargs
+            }
 
     model: nn.Module = model_class(**model_configs)
     checkpoint_state_dict = torch.load(model_path, map_location=map_location)
