@@ -33,6 +33,7 @@ def compute_classification_metrics(confusion_matrix: np.ndarray) -> Tuple[Dict[s
     - Recall
     - F1 score
     - Macro F1 score
+    - Matthews correlation coefficient (MCC)
 
     The function automatically detects the classification problem type:
     - Binary classification if the confusion matrix has shape `(2, 2)`.
@@ -44,6 +45,9 @@ def compute_classification_metrics(confusion_matrix: np.ndarray) -> Tuple[Dict[s
     Macro F1 Score is the harmonic mean of per-class F1 scores for both binary and
     multiclass problems. All classes in the confusion matrix receive equal
     weight; classes absent from both labels and predictions contribute zero.
+
+    MCC is computed for both binary and multiclass problems and is zero when
+    its denominator is zero (including an empty confusion matrix).
 
     The confusion matrix is expected to follow the convention:
 
@@ -89,6 +93,16 @@ def compute_classification_metrics(confusion_matrix: np.ndarray) -> Tuple[Dict[s
     # Compute accuracy
     total_samples = confusion_matrix.sum()
     accuracy = true_positives.sum() / total_samples if total_samples > 0 else 0.0
+
+    # Compute Matthews correlation coefficient (MCC)
+    predicted_counts = confusion_matrix.sum(axis=0)
+    actual_counts = confusion_matrix.sum(axis=1)
+    mcc_numerator = true_positives.sum() * total_samples - np.dot(actual_counts, predicted_counts)
+    mcc_denominator_squared = (
+        (total_samples ** 2 - np.dot(predicted_counts, predicted_counts))
+        * (total_samples ** 2 - np.dot(actual_counts, actual_counts))
+    )
+    mcc = mcc_numerator / np.sqrt(mcc_denominator_squared) if mcc_denominator_squared > 0 else 0.0
 
     f1_denominators = confusion_matrix.sum(axis=0) + confusion_matrix.sum(axis=1)
     class_f1_scores = np.divide(
@@ -141,6 +155,7 @@ def compute_classification_metrics(confusion_matrix: np.ndarray) -> Tuple[Dict[s
         "Recall": float(recall),
         "F1 Score": float(f1_score),
         "Macro F1 Score": float(macro_f1_score),
+        "MCC": float(mcc),
     }
 
 
