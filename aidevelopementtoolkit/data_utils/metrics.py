@@ -32,6 +32,7 @@ def compute_classification_metrics(confusion_matrix: np.ndarray) -> Tuple[Dict[s
     - Precision
     - Recall
     - F1 score
+    - Macro F1 score
 
     The function automatically detects the classification problem type:
     - Binary classification if the confusion matrix has shape `(2, 2)`.
@@ -39,6 +40,10 @@ def compute_classification_metrics(confusion_matrix: np.ndarray) -> Tuple[Dict[s
 
     For multiclass problems, Precision, Recall, and F1 Score are computed
     using macro averaging.
+
+    Macro F1 Score is the harmonic mean of per-class F1 scores for both binary and
+    multiclass problems. All classes in the confusion matrix receive equal
+    weight; classes absent from both labels and predictions contribute zero.
 
     The confusion matrix is expected to follow the convention:
 
@@ -69,7 +74,7 @@ def compute_classification_metrics(confusion_matrix: np.ndarray) -> Tuple[Dict[s
     ...         [1, 9],
     ...     ]
     ... )
-    >>> metrics, normalized_cm = compute_classification_metrics_from_cm(cm)
+    >>> metrics, normalized_cm = compute_classification_metrics(cm)
     """
 
     confusion_matrix = np.asarray(confusion_matrix, dtype=np.float64,)
@@ -84,6 +89,15 @@ def compute_classification_metrics(confusion_matrix: np.ndarray) -> Tuple[Dict[s
     # Compute accuracy
     total_samples = confusion_matrix.sum()
     accuracy = true_positives.sum() / total_samples if total_samples > 0 else 0.0
+
+    f1_denominators = confusion_matrix.sum(axis=0) + confusion_matrix.sum(axis=1)
+    class_f1_scores = np.divide(
+        2 * true_positives,
+        f1_denominators,
+        out=np.zeros_like(true_positives),
+        where=f1_denominators > 0,
+    )
+    macro_f1_score = np.mean(class_f1_scores)
 
     if num_classes == 2:
 
@@ -126,6 +140,7 @@ def compute_classification_metrics(confusion_matrix: np.ndarray) -> Tuple[Dict[s
         "Precision": float(precision),
         "Recall": float(recall),
         "F1 Score": float(f1_score),
+        "Macro F1 Score": float(macro_f1_score),
     }
 
 
