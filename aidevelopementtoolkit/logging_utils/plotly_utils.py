@@ -3,7 +3,16 @@ from typing import List, Optional, Tuple
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
 from aidevelopementtoolkit.logging_utils.logger import get_formatted_logger
+from aidevelopementtoolkit.data_utils.iq_preprocessing.amplitude import plateau_amplitude, signal_amplitude
+from aidevelopementtoolkit.data_utils.iq_preprocessing.convert import to_dB
+from aidevelopementtoolkit.data_utils.iq_preprocessing.format import hz
+from aidevelopementtoolkit.data_utils.iq_preprocessing.phase import signal_phase
+from aidevelopementtoolkit.data_utils.iq_preprocessing.power import signal_avg_power
+from aidevelopementtoolkit.data_utils.iq_preprocessing.spectrum import _next_pow2, signal_fft
+
 import mlflow
 
 from aidevelopementtoolkit.general_utils import check_shape
@@ -19,6 +28,8 @@ def plot_heatmap(
         xticklabels: Optional[List[str]] = None,
         yticklabels: Optional[List[str]] = None,
         zrange: Optional[Tuple[float, float]] = None,
+        width: Optional[int] = None,
+        height: Optional[int] = None,
     ) -> go.Figure:
     """Plot a matrix as an annotated heatmap.
 
@@ -51,6 +62,12 @@ def plot_heatmap(
     zrange : Optional[Tuple[float, float]], default=None
         Tuple specifying the minimum and maximum values for the color scale.
         When `None` the minimum and maximum values of `data` are used.
+
+    width : Optional[int], default=None
+        Figure width in pixels. Defaults to 800.
+
+    height : Optional[int], default=None
+        Figure height in pixels. Defaults to 600.
 
     Returns
     -------
@@ -95,32 +112,39 @@ def plot_heatmap(
     if zrange is not None:
         zmin, zmax = zrange
     else:
-        data_min = np.nanmin(data)
-        data_max = np.nanmax(data)
-
-        if data_min == data_max:
-            zmin = data_min - 1
-            zmax = data_max + 1
+        non_nan_data = data[~np.isnan(data)]
+        if non_nan_data.size == 0:
+            zmin, zmax = 0, 1
         else:
-            zmin = data_min
-            zmax = data_max
+            data_min = np.min(non_nan_data)
+            data_max = np.max(non_nan_data)
+
+            if data_min == data_max:
+                zmin = data_min - 1
+                zmax = data_max + 1
+            else:
+                zmin = data_min
+                zmax = data_max
 
     n_rows, n_cols = data.shape
+    z = np.where(np.isnan(data), zmin, data)
+    text = np.where(np.isnan(data), "", np.char.mod("%.2f", data))
 
     fig = go.Figure(
         data=go.Heatmap(
-            z=data,
+            z=z,
             colorscale="Blues",
             zmin=zmin,
             zmax=zmax,
-            text=np.round(data, 2),
-            texttemplate="%{z:.2f}",
+            text=text,
+            texttemplate="%{text}",
+            customdata=data,
             textfont={"size": 12},
             colorbar=dict(title="Value"),
             hovertemplate=(
                 "Row: %{y}<br>"
                 "Col: %{x}<br>"
-                "Value: %{z:.2f}<extra></extra>"
+                "Value: %{customdata:.2f}<extra></extra>"
             ),
         )
     )
@@ -129,12 +153,15 @@ def plot_heatmap(
         title=title,
         xaxis_title=xaxis_title,
         yaxis_title=yaxis_title,
+        width=width,
+        height=height,
     )
 
     fig.update_xaxes(
         tickmode="array",
         tickvals=list(range(n_cols)),
         ticktext=xticklabels if xticklabels is not None else [str(i) for i in range(n_cols)],
+        range=[-0.5, n_cols - 0.5],
         side="bottom",
     )
 
@@ -142,7 +169,8 @@ def plot_heatmap(
         tickmode="array",
         tickvals=list(range(n_rows)),
         ticktext=yticklabels if yticklabels is not None else [str(i) for i in range(n_rows)],
-        autorange="reversed",
+        range=[n_rows - 0.5, -0.5],
+        scaleratio=1,
     )
 
     if path is not None:
@@ -167,6 +195,8 @@ def plot_scatter(
         palette: str = "Plotly",
         xticklabels: Optional[List[str]] = None,
         yticklabels: Optional[List[str]] = None,
+        width: Optional[int] = None,
+        height: Optional[int] = None,
     ) -> go.Figure:
     """Plot a scatter plot.
 
@@ -210,6 +240,12 @@ def plot_scatter(
 
     yticklabels : Optional[List[str]], default=None
         Custom labels for the Y-axis ticks. If `None`, Plotly defaults are used.
+
+    width : Optional[int], default=None
+        Figure width in pixels. If `None`, Plotly's default is used.
+
+    height : Optional[int], default=None
+        Figure height in pixels. If `None`, Plotly's default is used.
 
     Returns
     -------
@@ -337,6 +373,8 @@ def plot_scatter(
         title=title,
         xaxis_title=xaxis_title,
         yaxis_title=yaxis_title,
+        width=width,
+        height=height,
     )
 
     if xticklabels is not None:
@@ -364,6 +402,8 @@ def plot_histogram(
         opacity: float = 0.75,
         xticklabels: Optional[List[str]] = None,
         yticklabels: Optional[List[str]] = None,
+        width: Optional[int] = None,
+        height: Optional[int] = None,
     ) -> go.Figure:
     """Plot a histogram.
 
@@ -401,6 +441,12 @@ def plot_histogram(
 
     yticklabels : Optional[List[str]], default=None
         Custom labels for the Y-axis ticks. If `None`, Plotly defaults are used.
+
+    width : Optional[int], default=None
+        Figure width in pixels. If `None`, Plotly's default is used.
+
+    height : Optional[int], default=None
+        Figure height in pixels. If `None`, Plotly's default is used.
 
     Returns
     -------
@@ -476,6 +522,8 @@ def plot_histogram(
         xaxis_title=xaxis_title,
         yaxis_title=yaxis_title,
         bargap=0.05,
+        width=width,
+        height=height,
     )
 
     if xticklabels is not None:
