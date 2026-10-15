@@ -360,7 +360,6 @@ def load_file(
         return_type: Optional[Literal["numpy", "pandas", "pil"]] = "pandas",
         process_rank: int = 0,
         header: Optional[int] = None,
-        key: Optional[str] = None,
     ) -> Any:
     """
     Loads a file. The format is deduced from the file extension.
@@ -399,10 +398,6 @@ def load_file(
         included in the output. When `return_type` is `"pandas"`, the header
         is passed directly to `pandas.read_csv`. Ignored for non-CSV files.
 
-    key : Optional[str], default=None
-        Required when loading `.npz` files. Name of the array to retrieve
-        from the archive. Ignored for all other formats.
-
     Returns
     -------
     Any
@@ -423,7 +418,7 @@ def load_file(
     >>> df = load_file("./tmp.csv")
     >>> arr = load_file("./tmp.csv", return_type="numpy")
     >>> content = load_file("s3://my-bucket/data/file.json")
-    >>> arr = load_file("./tmp.npz", key="arr")
+    >>> arrays = load_file("./tmp.npz")
     """
 
     # Read the file into a common file-like object
@@ -481,15 +476,8 @@ def load_file(
         return np.load(file_data, allow_pickle=False)
 
     elif ext == ".npz":
-        if key is None:
-            logger.error("`key` must be provided when loading '.npz' files.")
-            raise ValueError()
-
         with np.load(file_data, allow_pickle=False) as npz:
-            if key not in npz.files:
-                logger.error(f"Key '{key}' not found in '.npz' file. Available keys: {npz.files}.")
-                raise KeyError()
-            return npz[key]
+            return {name: npz[name] for name in npz.files}
 
     elif ext in _IMAGE_EXTENSIONS:
         img = Image.open(file_data)
