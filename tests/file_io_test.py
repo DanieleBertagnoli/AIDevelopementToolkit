@@ -158,6 +158,21 @@ if __name__ == "__main__":
         assert np.allclose(loaded_numpy, numpy_data)
 
         logger.info("✓ NPY save/load passed")
+
+        logger.info("Testing NPZ save/load.")
+        npz_path = os.path.join(test_dir, "data.npz")
+        first_array = np.array([1, 2, 3])
+        second_array = np.array([4, 5])
+        save_file(first_array, npz_path, key="first")
+        save_file(second_array, npz_path, append=True, key="second")
+
+        loaded_npz = load_file(npz_path)
+
+        assert set(loaded_npz) == {"first", "second"}
+        assert np.array_equal(loaded_npz["first"], first_array)
+        assert np.array_equal(loaded_npz["second"], second_array)
+
+        logger.info("✓ NPZ save/load passed")
         
         logger.info("Testing missing file handling.")
 
