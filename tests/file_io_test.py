@@ -2,7 +2,9 @@ import logging
 import os
 import shutil
 import tempfile
+import zipfile
 
+import h5py
 import numpy as np
 import pandas as pd
 
@@ -163,16 +165,36 @@ if __name__ == "__main__":
         npz_path = os.path.join(test_dir, "data.npz")
         first_array = np.array([1, 2, 3])
         second_array = np.array([4, 5])
-        save_file(first_array, npz_path, key="first")
-        save_file(second_array, npz_path, append=True, key="second")
+        save_file({"first": first_array}, npz_path)
+        save_file({"second": second_array}, npz_path, append=True)
 
         loaded_npz = load_file(npz_path)
 
         assert set(loaded_npz) == {"first", "second"}
         assert np.array_equal(loaded_npz["first"], first_array)
         assert np.array_equal(loaded_npz["second"], second_array)
+        with zipfile.ZipFile(npz_path) as npz_archive:
+            assert all(
+                entry.compress_type == zipfile.ZIP_DEFLATED
+                for entry in npz_archive.infolist()
+            )
 
         logger.info("✓ NPZ save/load passed")
+
+        logger.info("Testing H5 save/load.")
+        h5_path = os.path.join(test_dir, "data.h5")
+        save_file({"first": first_array}, h5_path)
+        save_file({"second": second_array}, h5_path, append=True)
+
+        loaded_h5 = load_file(h5_path)
+        assert set(loaded_h5) == {"first", "second"}
+        assert np.array_equal(loaded_h5["first"], first_array)
+        assert np.array_equal(loaded_h5["second"], second_array)
+        with h5py.File(h5_path, "r") as h5_archive:
+            assert h5_archive["first"].compression == "gzip"
+            assert h5_archive["second"].compression == "gzip"
+
+        logger.info("✓ H5 save/load passed")
         
         logger.info("Testing missing file handling.")
 

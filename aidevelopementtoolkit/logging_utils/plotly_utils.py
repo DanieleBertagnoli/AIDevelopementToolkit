@@ -6,12 +6,6 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from aidevelopementtoolkit.logging_utils.logger import get_formatted_logger
-from aidevelopementtoolkit.data_utils.iq_preprocessing.amplitude import plateau_amplitude, signal_amplitude
-from aidevelopementtoolkit.data_utils.iq_preprocessing.convert import to_dB
-from aidevelopementtoolkit.data_utils.iq_preprocessing.format import hz
-from aidevelopementtoolkit.data_utils.iq_preprocessing.phase import signal_phase
-from aidevelopementtoolkit.data_utils.iq_preprocessing.power import signal_avg_power
-from aidevelopementtoolkit.data_utils.iq_preprocessing.spectrum import _next_pow2, signal_fft
 
 import mlflow
 
@@ -337,9 +331,9 @@ def plot_scatter(
 
             logger.error(
                 f"Unknown palette '{palette}'. "
-                f"Available palettes: {available_palettes}"
+                f"Available palettes: {available_palettes}",
+                ValueError
             )
-            raise ValueError(f"Unknown palette: {palette}")
 
         colors = getattr(px.colors.qualitative, palette)
 

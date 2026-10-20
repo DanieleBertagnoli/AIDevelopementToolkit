@@ -63,28 +63,28 @@ class EarlyStopper:
         if delta_type not in ["absolute", "relative"]:
             logger.error(
                 f"The given `delta_type`={delta_type} is not valid. "
-                "Available ['absolute', 'relative']."
+                "Available ['absolute', 'relative'].",
+                ValueError
             )
-            raise ValueError()
 
         if criterion not in ["min", "max"]:
             logger.error(
                 f"The given `criterion`={criterion} is not valid. "
-                "Available ['min', 'max']."
+                "Available ['min', 'max'].",
+                ValueError
             )
-            raise ValueError()
 
         if delta_for_new_best < 0:
             logger.error(
-                f"The given `delta_for_new_best`={delta_for_new_best} is < 0."
+                f"The given `delta_for_new_best`={delta_for_new_best} is < 0.",
+                ValueError
             )
-            raise ValueError()
 
         if patience <= 0:
             logger.error(
-                f"The given `patience`={patience} must be > 0."
+                f"The given `patience`={patience} must be > 0.",
+                ValueError
             )
-            raise ValueError()
 
         self.delta_for_new_best = delta_for_new_best
         self.delta_type = delta_type
@@ -146,9 +146,9 @@ class EarlyStopper:
         if not isinstance(epoch_metric, Real):
             logger.error(
                 f"The given `epoch_metric` must be a real number. "
-                f"Given type: {type(epoch_metric)}"
+                f"Given type: {type(epoch_metric)}",
+                ValueError
             )
-            raise TypeError()
 
         epoch_metric = float(epoch_metric)
 

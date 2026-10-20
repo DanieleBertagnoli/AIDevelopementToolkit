@@ -4,6 +4,8 @@ import os
 import json
 
 from botocore.exceptions import ClientError
+import h5py
+from mlflow.entities import Run
 
 from aidevelopementtoolkit.logging_utils.logger import get_formatted_logger
 
@@ -15,7 +17,7 @@ from PIL import Image
 from aidevelopementtoolkit.logging_utils.boto3_utils import create_s3_client, read_s3_object, write_s3_object, parse_s3_path
 
 
-_SUPPORTED_EXTENSIONS = {".json", ".yaml", ".yml", ".csv", ".npy", ".npz", ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".webp"}
+_SUPPORTED_EXTENSIONS = {".json", ".yaml", ".yml", ".csv", ".npy", ".npz", ".h5", ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".webp"}
 _IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".webp"}
 
 logger = get_formatted_logger(name=__name__, level="ERROR")
@@ -25,9 +27,8 @@ def _get_extension(path: str) -> str:
     if ext not in _SUPPORTED_EXTENSIONS:
         logger.error(
             f"Unsupported file extension '{ext}'. "
-            f"Supported: {sorted(_SUPPORTED_EXTENSIONS)}"
+            f"Supported: {sorted(_SUPPORTED_EXTENSIONS)}", TypeError
         )
-        raise ValueError()
     return ext
 
 
@@ -108,7 +109,7 @@ def convert_to_serializable_data(data: Any, keep_list: bool = True) -> Any:
     return data
 
 
-def _serialize_data(data: Any, ext: str, key: Optional[str] = None) -> bytes:
+def _serialize_data(data: Any, ext: str) -> bytes:
     """
     Serialize data into bytes according to the file extension.
 
@@ -125,13 +126,10 @@ def _serialize_data(data: Any, ext: str, key: Optional[str] = None) -> bytes:
         - `.yaml` / `.yml`: Any object supported by `yaml.safe_dump`.
         - `.csv`: Any object convertible to a `pandas.DataFrame`.
         - `.npy`: Any object supported by `numpy.save`.
-        - `.npz`: Any object supported by `numpy.savez`, stored under `key`.
+        - `.npz` / `.h5`: A dictionary mapping string keys to NumPy arrays.
 
     ext : str
         File extension that determines the serialization format.
-
-    key : Optional[str], default=None
-        Required when `ext` is `.npz`. Name under which `data` is stored.
 
     Returns
     -------
@@ -147,6 +145,35 @@ def _serialize_data(data: Any, ext: str, key: Optional[str] = None) -> bytes:
         if fmt == "JPG":
             fmt = "JPEG"
         data.save(buffer, format=fmt)
+        return buffer.getvalue()
+
+    if ext in {".npz", ".h5"}:
+        if not isinstance(data, dict) or any(
+            not isinstance(name, str) or not isinstance(array, np.ndarray)
+            for name, array in data.items()
+        ):
+            logger.error(f"Data for '{ext}' must be a Dict[str, np.ndarray].", TypeError)
+
+        buffer = io.BytesIO()
+        if ext == ".npz":
+            np.savez_compressed(buffer, **data)
+        else:
+            with h5py.File(buffer, "w") as archive:
+                for name, array in data.items():
+                    
+                    if not name or any(not part for part in name.split("/")):
+                        logger.error("HDF5 dataset names must not be empty.", ValueError)
+                    
+                    parent_name, _, dataset_name = name.rpartition("/")
+                    parent = archive.require_group(parent_name) if parent_name else archive
+                    is_scalar = array.ndim == 0
+                    dataset = parent.create_dataset(
+                        dataset_name,
+                        data=np.atleast_1d(array),
+                        compression="gzip",
+                    )
+                    if is_scalar:
+                        dataset.attrs["_aidevelopementtoolkit_scalar"] = True
         return buffer.getvalue()
 
     data = convert_to_serializable_data(data)
@@ -165,16 +192,7 @@ def _serialize_data(data: Any, ext: str, key: Optional[str] = None) -> bytes:
         np.save(buffer, data)
         return buffer.getvalue()
 
-    elif ext == ".npz":
-        if key is None:
-            logger.error("`key` must be provided when saving '.npz' files.")
-            raise ValueError()
-        buffer = io.BytesIO()
-        np.savez(buffer, **{key: data})
-        return buffer.getvalue()
-
-    logger.error(f"Unsupported file extension: '{ext}'.")
-    raise ValueError()
+    logger.error(f"Unsupported file extension: '{ext}'.", TypeError)
 
 
 def save_file(
@@ -183,12 +201,11 @@ def save_file(
         append: bool = False,
         header: bool = False,
         index: bool = False,
-        key: Optional[str] = None,
     ) -> None:
     """
     Saves data to a file. The format is deduced from the file extension.
 
-    Supported formats: `.json`, `.yaml` / `.yml`, `.csv`, `.npy`, `.npz`.
+    Supported formats: `.json`, `.yaml` / `.yml`, `.csv`, `.npy`, `.npz`, `.h5`.
 
     Local paths are written directly to the filesystem. Paths beginning with
     `s3://` are written to an S3-compatible object store using the boto3
@@ -201,7 +218,7 @@ def save_file(
         - JSON / YAML: any JSON-serialisable object.
         - CSV: any object convertible to a `pandas.DataFrame` or a `pandas.DataFrame` itself.
         - NPY: a `numpy.ndarray`.
-        - NPZ: a `numpy.ndarray`, stored under `key`.
+        - NPZ / H5: a `dict[str, numpy.ndarray]`, with dictionary keys used as array names.
         - Images (`.png`, `.jpg`, `.jpeg`, `.bmp`, `.tiff`, `.webp`): a `PIL.Image.Image` or a `numpy.ndarray`.
 
     path : str
@@ -220,7 +237,7 @@ def save_file(
         - **JSON / YAML list**: extends the list.
         - **JSON / YAML dict**: updates the dict.
         - **CSV**: appends rows (no header written).
-        - **NPZ**: adds/overwrites `key` in the existing archive.
+        - **NPZ / H5**: adds or overwrites arrays by dictionary key.
 
     header : bool, default=False
         Only relevant for CSV files. If `True`, writes column names as the first row.
@@ -230,10 +247,6 @@ def save_file(
     index : bool, default=False
         Only relevant for CSV files. Whether to write row indices.
 
-    key : Optional[str], default=None
-        Required when saving `.npz` files. Name under which `data` is stored
-        in the archive. Ignored for all other formats.
-
     Examples
     --------
     >>> save_file({"a": 1}, "./tmp.json")
@@ -241,7 +254,8 @@ def save_file(
     >>> save_file({"b": 2}, "./tmp.json", append=True)
     >>> save_file({"x": 1}, "./tmp.yaml")
     >>> save_file([{"col": 1}], "./tmp.csv")
-    >>> save_file(np.array([1, 2, 3]), "./tmp.npz", key="arr")
+    >>> save_file({"arr": np.array([1, 2, 3])}, "./tmp.npz")
+    >>> save_file({"arr": np.array([1, 2, 3])}, "./tmp.h5")
 
     >>> save_file(
     ...     {"a": 1},
@@ -257,7 +271,7 @@ def save_file(
         bucket, s3_key = parse_s3_path(path)
         client = create_s3_client()
 
-        serialized_data = _serialize_data(data, ext, key=key)
+        serialized_data = _serialize_data(data, ext)
 
         write_s3_object(
             client=client,
@@ -292,9 +306,9 @@ def save_file(
             else:
                 logger.error(
                     "Cannot append: incompatible JSON types. "
-                    f"Respectively: {type(existing)} and {type(data)}."
+                    f"Respectively: {type(existing)} and {type(data)}.",
+                    RuntimeError
                 )
-                raise ValueError()
 
         with open(path, "w") as f:
             json.dump(data, f, indent=4)
@@ -315,8 +329,7 @@ def save_file(
                 data = existing
 
             else:
-                logger.error("Cannot append: incompatible YAML types.")
-                raise RuntimeError()
+                logger.error("Cannot append: incompatible YAML types.", RuntimeError)
 
         with open(path, "w") as f:
             yaml.safe_dump(data, f)
@@ -333,20 +346,16 @@ def save_file(
     elif ext == ".npy":
         np.save(path, data)
 
-    # Handle local NPZ files
-    elif ext == ".npz":
-        if key is None:
-            logger.error("`key` must be provided when saving '.npz' files.")
-            raise ValueError()
-
+    # Handle local compressed array archives
+    elif ext in {".npz", ".h5"}:
         if append and os.path.exists(path):
-            with np.load(path, allow_pickle=False) as existing:
-                arrays = {k: existing[k] for k in existing.files}
+            arrays = load_file(path)
+            arrays.update(data)
         else:
-            arrays = {}
+            arrays = data
 
-        arrays[key] = data
-        np.savez(path, **arrays)
+        with open(path, "wb") as f:
+            f.write(_serialize_data(arrays, ext))
 
     # Handle local image files
     elif ext in _IMAGE_EXTENSIONS:
@@ -364,7 +373,7 @@ def load_file(
     """
     Loads a file. The format is deduced from the file extension.
 
-    Supported formats: `.json`, `.yaml` / `.yml`, `.csv`, `.npy`, `.npz`.
+    Supported formats: `.json`, `.yaml` / `.yml`, `.csv`, `.npy`, `.npz`, `.h5`.
 
     Local paths are read directly from the filesystem. Paths beginning with
     `s3://` are read from an S3-compatible object store using the boto3
@@ -428,8 +437,7 @@ def load_file(
         client = create_s3_client()
 
         if file_exists(path) is False:
-            logger.error(f"S3 object '{path}' does not exist.")
-            raise FileNotFoundError()
+            logger.error(f"S3 object '{path}' does not exist.", FileNotFoundError)
 
         file_data = io.BytesIO(
             read_s3_object(
@@ -443,8 +451,8 @@ def load_file(
     else:
 
         if not os.path.exists(path):
-            logger.error(f"File '{path}' does not exist.")
-            raise FileNotFoundError()
+            logger.error(f"File '{path}' does not exist.", FileNotFoundError)
+
 
         with open(path, "rb") as f:
             file_data = io.BytesIO(f.read())
@@ -469,8 +477,7 @@ def load_file(
             return df
 
         else:
-            logger.error(f"Unsupported return type: '{return_type}'. Supported: 'numpy', 'pandas'.")
-            raise ValueError()
+            logger.error(f"Unsupported return type: '{return_type}'. Supported: 'numpy', 'pandas'.", TypeError)
 
     elif ext == ".npy":
         return np.load(file_data, allow_pickle=False)
@@ -478,6 +485,19 @@ def load_file(
     elif ext == ".npz":
         with np.load(file_data, allow_pickle=False) as npz:
             return {name: npz[name] for name in npz.files}
+
+    elif ext == ".h5":
+        arrays = {}
+        with h5py.File(file_data, "r") as archive:
+            def collect_dataset(name, dataset):
+                if isinstance(dataset, h5py.Dataset):
+                    array = dataset[()]
+                    if dataset.attrs.get("_aidevelopementtoolkit_scalar", False):
+                        array = array[0]
+                    arrays[name] = np.asarray(array)
+
+            archive.visititems(collect_dataset)
+        return arrays
 
     elif ext in _IMAGE_EXTENSIONS:
         img = Image.open(file_data)
@@ -487,8 +507,7 @@ def load_file(
         elif return_type == "pil":
             return img
         else:
-            logger.error(f"Unsupported return type: '{return_type}'. Supported: 'numpy', 'pil'.")
-            raise ValueError()
+            logger.error(f"Unsupported return type: '{return_type}'. Supported: 'numpy', 'pil'.", TypeError)
 
 
 def file_exists(path: str) -> bool:
@@ -528,7 +547,7 @@ def file_exists(path: str) -> bool:
         except ClientError as e:
             if e.response["Error"]["Code"] in ("404", "NoSuchKey"):
                 return False
-            raise
+    
 
     else:
         return os.path.exists(path)

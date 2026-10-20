@@ -109,8 +109,7 @@ def min_max_scaling(
 
     if range is not None:
         if len(range) != 2 or range[0] >= range[1]:
-            logger.error("The given range must be a tuple `(min, max)` with min < max.")
-            raise ValueError()
+            logger.error("The given range must be a tuple `(min, max)` with min < max.", ValueError)
 
         target_min, target_max = range
         data_min = min_fn(data)

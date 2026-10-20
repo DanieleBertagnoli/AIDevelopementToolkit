@@ -1,7 +1,6 @@
 from typing import Any, Dict, List, Optional, Tuple
 import inspect
 import os
-import warnings
 
 import numpy as np
 import pandas as pd
@@ -20,6 +19,8 @@ def save_model(
         model: nn.Module,
         model_configs: Dict[str, Any],
         checkpoint_dir: str,
+        optimizer: Optional[torch.optim.Optimizer] = None,
+        epoch: Optional[int] = None,
     ) -> None:
     """Save a PyTorch model checkpoint.
 
@@ -37,6 +38,13 @@ def save_model(
 
     checkpoint_dir : str
         Directory where the checkpoint files will be stored.
+
+    optimizer : Optional[torch.optim.Optimizer], default=None
+        Optimizer whose state will be saved alongside the model. When
+        set to `None`, the optimizer state will not be saved.
+
+    epoch : Optional[int], default=None
+        Current training epoch. If provided, it will be saved alongside the model.
 
     Returns
     -------
@@ -70,7 +78,15 @@ def save_model(
     model_path = os.path.join(checkpoint_dir, "weights.pt")
     checkpoint_path = os.path.join(checkpoint_dir, "configs.json")
 
-    torch.save(model.state_dict(), model_path)
+    dict_to_save = {
+        "model_state_dict": model.state_dict(),
+    }
+    if optimizer is not None:
+        dict_to_save["optimizer_state_dict"] = optimizer.state_dict()
+    if epoch is not None:
+        dict_to_save["epoch"] = epoch
+
+    torch.save(dict_to_save, model_path)
     save_file(model_configs, checkpoint_path)
 
 
@@ -79,7 +95,7 @@ def load_model(
         checkpoint_dir: str,
         map_location: str = "cpu",
         configs_to_override: Optional[Dict[str, Any]] = None,
-    ) -> nn.Module:
+    ) -> Tuple[nn.Module, Optional[Dict[str, Any]], Optional[int]]:
     """Load a PyTorch model checkpoint.
 
     The model class must accept the parameters stored in
@@ -103,8 +119,9 @@ def load_model(
 
     Returns
     -------
-    nn.Module
-        Reconstructed model with loaded weights.
+    Tuple[nn.Module, Optional[Dict[str, Any]], Optional[int]]
+        Reconstructed model with loaded weights, optimizer state, and epoch.
+        Missing optimizer state or epoch values are returned as `None`.
 
     Examples
     --------
@@ -119,25 +136,22 @@ def load_model(
     ...             output_features,
     ...         )
     ...
-    >>> model = load_model(
+    >>> model, optimizer_state, epoch = load_model(
     ...     model_class=MyModel,
     ...     checkpoint_dir="checkpoints/model_v1",
     ... )
     """
 
     if not os.path.exists(checkpoint_dir):
-        logger.error(f"Checkpoint directory '{checkpoint_dir}' does not exist.")
-        raise FileNotFoundError()
+        logger.error(f"Checkpoint directory '{checkpoint_dir}' does not exist.", FileNotFoundError)
 
     model_configs_path = os.path.join(checkpoint_dir, "configs.json")
     if not os.path.exists(model_configs_path):
-        logger.error(f"Model configuration file '{model_configs_path}' does not exist.")
-        raise FileNotFoundError()
+        logger.error(f"Model configuration file '{model_configs_path}' does not exist.", FileNotFoundError)
 
     model_path = os.path.join(checkpoint_dir, "weights.pt")
     if not os.path.exists(model_path):
-        logger.error(f"Model weights file '{model_path}' does not exist.")
-        raise FileNotFoundError()
+        logger.error(f"Model weights file '{model_path}' does not exist.", FileNotFoundError)
     
     model_configs = load_file(model_configs_path)
     if configs_to_override is not None:
@@ -176,7 +190,10 @@ def load_model(
             }
 
     model: nn.Module = model_class(**model_configs)
-    checkpoint_state_dict = torch.load(model_path, map_location=map_location)
+    checkpoint = torch.load(model_path, map_location=map_location)
+    checkpoint_state_dict = checkpoint.get("model_state_dict", checkpoint)
+    optimizer_state_dict = checkpoint.get("optimizer_state_dict")
+    epoch = checkpoint.get("epoch")
     model_state_dict = model.state_dict()
 
     compatible_state_dict = {
@@ -212,7 +229,7 @@ def load_model(
     print_table(pd.DataFrame(rows).set_index("Layer"), tablefmt="simple")
     model.load_state_dict(compatible_state_dict, strict=False)
 
-    return model
+    return model, optimizer_state_dict, epoch
 
 
 def export_to_onnx(
@@ -275,8 +292,7 @@ def export_to_onnx(
     """
 
     if len(dummy_input) != len(input_names):
-        logger.error("The number of dummy inputs must match the number of input names.")
-        raise ValueError()
+        logger.error("The number of dummy inputs must match the number of input names.", ValueError)
 
     model.eval()
 
@@ -318,6 +334,7 @@ def export_to_onnx(
                 atol=1e-05,
             )
 
+
 def run_onnx(
         onnx_model_path: str,
         input_data: Dict[str, np.ndarray],
@@ -352,8 +369,7 @@ def run_onnx(
     """
 
     if not os.path.exists(onnx_model_path):
-        logger.error(f"ONNX model file '{onnx_model_path}' does not exist.")
-        raise FileNotFoundError()
+        logger.error(f"ONNX model file '{onnx_model_path}' does not exist.", FileNotFoundError)
 
     ort_session = ort.InferenceSession(onnx_model_path)
     outputs = ort_session.run(None, input_data)

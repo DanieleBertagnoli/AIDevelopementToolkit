@@ -4,6 +4,10 @@ from typing import Any, Union, Tuple, Dict
 import torch
 from torch import nn
 
+from aidevelopementtoolkit.logging_utils.logger import get_formatted_logger
+
+logger = get_formatted_logger(__name__)
+
 class AbstractValidationStep(ABC):
     """This abstract class serves as a blueprint for creating specific validation 
     step classes that define how a model is evaluated on a single batch of data. 
@@ -61,7 +65,7 @@ class AbstractValidationStep(ABC):
             The output of the validation step, which can be any type depending on the 
             specific implementation in the subclass.
         """
-        raise NotImplementedError("Subclasses must implement this method.")
+        logger.error("Subclasses must implement this method.", NotImplementedError)
 
 
 class AbstractValidator(ABC):
@@ -131,4 +135,4 @@ class AbstractValidator(ABC):
             The result of the validation, which can be any type depending on the 
             specific implementation in the subclass.
         """
-        raise NotImplementedError("Subclasses must implement this method.")
+        logger.error("Subclasses must implement this method.", NotImplementedError)

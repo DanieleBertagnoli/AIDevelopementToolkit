@@ -40,10 +40,19 @@ if __name__ == "__main__":
         # Test load_model()
         logger.info("Testing load_model()")
 
-        loaded_model = load_model(resnet18, checkpoint_dir)
+        loaded_model, optimizer_state, epoch = load_model(resnet18, checkpoint_dir)
         loaded_model.eval()
 
         logger.info("✓ load_model() passed")
+        assert optimizer_state is None
+        assert epoch is None
+
+        optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+        save_model(model, model_config, checkpoint_dir, optimizer=optimizer, epoch=5)
+        model_with_state, optimizer_state, epoch = load_model(resnet18, checkpoint_dir)
+        assert isinstance(model_with_state, type(model))
+        assert isinstance(optimizer_state, dict)
+        assert epoch == 5
 
         # Test export_to_onnx()
         logger.info("Testing export_to_onnx()")

@@ -38,8 +38,7 @@ def models_to_numpy(models: Iterable[BaseModel], fields: Sequence[str]) -> np.nd
     """
 
     if not fields:
-        logger.error("Expected at least one field name.")
-        raise ValueError()
+        logger.error("Expected at least one field name.", ValueError)
 
     rows = [
         [get_field_value(model, field) for field in fields]
@@ -110,11 +109,6 @@ def set_field_value(
 
     value : Any
         The value to assign to the target field.
-
-    Raises
-    ------
-    AttributeError
-        If any segment of the path does not exist on the current model.
 
     Examples
     --------

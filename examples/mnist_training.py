@@ -124,8 +124,7 @@ class MNISTValidationStep(AbstractValidationStep):
         """
 
         if len(batch) != 2:
-            self.logger.error("Invalid batch: expected a tuple of (images, labels)")
-            raise ValueError()
+            self.logger.error("Invalid batch: expected a tuple of (images, labels)", ValueError)
 
         with torch.inference_mode():
             imgs, labels = batch
@@ -318,8 +317,7 @@ class MNISTTrainingStep(AbstractTrainingStep):
         """
 
         if len(batch) != 2:
-            self.logger.error("Invalid batch: expected a tuple of (images, labels)")
-            raise ValueError()
+            self.logger.error("Invalid batch: expected a tuple of (images, labels)", ValueError)
 
         imgs, labels = batch
 
@@ -638,8 +636,7 @@ if __name__ == "__main__":
 
     if "RANK" not in os.environ or "WORLD_SIZE" not in os.environ:
         logger = get_formatted_logger()
-        logger.error("The script must be ran using `torchrun` and not `python`")
-        raise SyntaxError()
+        logger.error("The script must be ran using `torchrun` and not `python`", SyntaxError)
 
     from aidevelopementtoolkit.torch_utils.distributed_torch_utils import run_distributed_function
 

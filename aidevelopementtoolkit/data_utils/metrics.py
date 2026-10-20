@@ -239,9 +239,8 @@ def compute_confusion_matrix(
             logger.error(
                 "The given `predictions` and `padding_mask` have different "
                 "shapes: "
-                f"{predictions.shape} vs {padding_mask.shape}"
+                f"{predictions.shape} vs {padding_mask.shape}", ValueError
             )
-            raise ValueError()
 
         valid = ~padding_mask
 
@@ -255,16 +254,14 @@ def compute_confusion_matrix(
     if np.any(predictions < 0) or np.any(predictions >= num_classes):
         logger.error(
             "Predictions contain class indices outside the valid range "
-            f"[0, {num_classes - 1}]."
+            f"[0, {num_classes - 1}].", ValueError
         )
-        raise ValueError()
 
     if np.any(labels < 0) or np.any(labels >= num_classes):
         logger.error(
             "Labels contain class indices outside the valid range "
-            f"[0, {num_classes - 1}]."
+            f"[0, {num_classes - 1}].", ValueError
         )
-        raise ValueError()
 
     return confusion_matrix(
         labels,

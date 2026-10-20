@@ -67,15 +67,14 @@ def run_distributed_function(
 
     # Handle mismatched launch
     if local_rank >= len(devices):
-        logger.error(f"Configuration error: `LOCAL_RANK`={local_rank} exceeds `devices` ({len(devices)}).")
-        raise ValueError()
+        logger.error(f"Configuration error: `LOCAL_RANK`={local_rank} exceeds `devices` ({len(devices)}).", ValueError)
 
     elif local_world_size != len(devices):
         logger.error(
             f"Configuration error: Started {local_world_size} processes on this node "
-            f"but indicated {len(devices)} GPUs (`devices`). These two must be coherent."
+            f"but indicated {len(devices)} GPUs (`devices`). These two must be coherent.",
+            ValueError
         )
-        raise ValueError()
 
     # Restrict visible GPUs for this process
     environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, devices))

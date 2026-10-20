@@ -29,11 +29,6 @@ def create_s3_client():
     botocore.client.S3
         Configured S3 client.
 
-    Raises
-    ------
-    EnvironmentError
-        If any of the required environment variables are not set.
-
     Examples
     --------
     >>> import os
@@ -47,8 +42,7 @@ def create_s3_client():
     missing = [var for var in required if not os.environ.get(var)]
 
     if missing:
-        logger.error(f"Missing required environment variables: {missing}")
-        raise EnvironmentError()
+        logger.error(f"Missing required environment variables: {missing}", EnvironmentError)
 
     return boto3.client(
         "s3",
@@ -196,13 +190,11 @@ def parse_s3_path(path: str) -> Tuple[str, str]:
     s3_path = path.removeprefix("s3://")
 
     if "/" not in s3_path:
-        logger.error("Invalid S3 path. Expected format: 's3://bucket/key'.")
-        raise ValueError()
+        logger.error("Invalid S3 path. Expected format: 's3://bucket/key'.", ValueError)
 
     bucket, key = s3_path.split("/", maxsplit=1)
 
     if not bucket or not key:
-        logger.error("Invalid S3 path. Expected format: 's3://bucket/key'.")
-        raise ValueError()
+        logger.error("Invalid S3 path. Expected format: 's3://bucket/key'.", ValueError)
 
     return bucket, key

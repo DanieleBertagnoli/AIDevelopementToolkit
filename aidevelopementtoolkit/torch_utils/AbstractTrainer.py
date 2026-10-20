@@ -2,11 +2,14 @@ from abc import ABC, abstractmethod
 from typing import Any, Optional, Tuple, Union, Dict
 
 import torch
-from torch import nn
+from torch import log, nn
 from torch.utils.data import DataLoader
 
+from aidevelopementtoolkit.logging_utils.logger import get_formatted_logger
 from aidevelopementtoolkit.torch_utils.EarlyStopper import EarlyStopper
 from aidevelopementtoolkit.torch_utils.AbstractValidator import AbstractValidator
+
+logger = get_formatted_logger(__name__)
 
 class AbstractTrainingStep(ABC):
     """This abstract class serves as a blueprint for creating specific training 
@@ -69,7 +72,7 @@ class AbstractTrainingStep(ABC):
             The output of the training step, which can be any type depending on the 
             specific implementation in the subclass.
         """
-        raise NotImplementedError("Subclasses must implement this method.")
+        logger.error("Subclasses must implement this method.", NotImplementedError)
 
 
 class AbstractTrainer(ABC):
@@ -160,4 +163,4 @@ class AbstractTrainer(ABC):
         nn.Module
             The trained model after completing the training process.
         """
-        raise NotImplementedError("Subclasses must implement this method.")
+        logger.error("Subclasses must implement this method.", NotImplementedError)

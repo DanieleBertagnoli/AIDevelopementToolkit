@@ -80,12 +80,10 @@ def start_mlflow_run(
     logger = get_formatted_logger(name="mlflow", level="ERROR")
 
     if run_id is not None and "run_id" in mlflow_kwargs:
-        logger.error("`run_id` should not be provided in `mlflow_kwargs` when resuming a run.")
-        raise ValueError()
+        logger.error("`run_id` should not be provided in `mlflow_kwargs` when resuming a run.", ValueError)
 
     if "MLFLOW_ENDPOINT_URL" not in environ:
-        logger.error("`MLFLOW_ENDPOINT_URL` environment variable is not set.")
-        raise ValueError()
+        logger.error("`MLFLOW_ENDPOINT_URL` environment variable is not set.", ValueError)
     
     mlflow_tracking_uri = environ["MLFLOW_ENDPOINT_URL"]
 
@@ -106,8 +104,7 @@ def start_mlflow_run(
 
         for env_var in needed_env_vars:
             if env_var not in environ:
-                logger.error(f"`{env_var}` environment variable is not set.")
-                raise ValueError()
+                logger.error(f"`{env_var}` environment variable is not set.", EnvironmentError)
 
         os.environ["AWS_ACCESS_KEY_ID"] = environ["MLFLOW_S3_AWS_ACCESS_KEY_ID"]
         os.environ["AWS_SECRET_ACCESS_KEY"] = environ["MLFLOW_S3_AWS_SECRET_ACCESS_KEY"]
@@ -118,16 +115,15 @@ def start_mlflow_run(
         if not mlflow_tracking_uri.endswith("mlflow.db"):
             logger.error(
                 f"The provided `mlflow_tracking_uri`='{mlflow_tracking_uri}' is "
-                "a local server but it's not ending with 'mlflow.db'."
+                "a local server but it's not ending with 'mlflow.db'.",
+                ValueError
             )
-            raise ValueError()
 
         local_path = mlflow_tracking_uri.replace("sqlite:///", "").replace("mlflow.db", "")
         artifacts_location = os.path.join(local_path, "artifacts", experiment_name)
 
     else:
-        logger.error(f"Invalid `MLFLOW_ENDPOINT_URL`: {mlflow_tracking_uri}")
-        raise ValueError()
+        logger.error(f"Invalid `MLFLOW_ENDPOINT_URL`: {mlflow_tracking_uri}", ValueError)
     
     # Set tracking URI
     mlflow.set_tracking_uri(mlflow_tracking_uri)
