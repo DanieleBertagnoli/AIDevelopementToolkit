@@ -50,6 +50,7 @@ from aidevelopementtoolkit.logging_utils.mlflow_utils import start_mlflow_run, l
 from aidevelopementtoolkit.torch_utils.EarlyStopper import EarlyStopper
 from aidevelopementtoolkit.torch_utils.AbstractTrainer import AbstractTrainer, AbstractTrainingStep
 from aidevelopementtoolkit.torch_utils.AbstractValidator import AbstractValidator, AbstractValidationStep
+from aidevelopementtoolkit.torch_utils.schedulers import AbstractScheduler
 from aidevelopementtoolkit.data_utils.metrics import compute_classification_metrics, compute_confusion_matrix
 from aidevelopementtoolkit.logging_utils.plotly_utils import plot_heatmap
 from aidevelopementtoolkit.torch_utils.distributed_torch_utils import dist_barrier, get_process_rank
@@ -361,6 +362,9 @@ class MNISTTrainer(AbstractTrainer):
         early_stopper : Optional[EarlyStopper]
             The early stopper used to halt training if the model's performance stops improving.
             It can be set to `None` if early stopping is not desired.
+
+        lr_scheduler : AbstractScheduler
+            The scheduler used to update the optimizer's learning rate each epoch.
             
         checkpoint_interval : int
             The interval (in epochs) at which to save model checkpoints.
@@ -373,6 +377,7 @@ class MNISTTrainer(AbstractTrainer):
             epochs: int,
             validator: AbstractValidator,
             early_stopper: Optional[EarlyStopper],
+            lr_scheduler: AbstractScheduler,
             checkpoint_interval: int,
         ) -> None:
 
@@ -384,6 +389,7 @@ class MNISTTrainer(AbstractTrainer):
             early_stopper=early_stopper,
             checkpoint_interval=checkpoint_interval,
         )
+        self.lr_scheduler = lr_scheduler
 
 
     def train(
@@ -417,6 +423,10 @@ class MNISTTrainer(AbstractTrainer):
         ### Training Loop ###
 
         for e in range(1, self.epochs+1):
+
+            learning_rate = self.lr_scheduler.get_weight(e)
+            for parameter_group in self.training_step.optimizer.param_groups:
+                parameter_group["lr"] = learning_rate
 
             dist_barrier()
 
@@ -545,13 +555,23 @@ def main(log_level: str) -> None:
 
     ### Training Setup ###
 
-    lr=0.001
+    lr = 0.001
+    min_lr = 1e-5
     optimizer = AdamW(params=model.parameters(), lr=lr)
     loss_fn = CrossEntropyLoss()
 
     seed = 47
     patience=5
     epochs=100
+    lr_scheduler = AbstractScheduler.get_scheduler(
+        "CosineScheduler",
+        {
+            "start_value": lr,
+            "end_value": min_lr,
+            "starting_epoch": 1,
+            "ending_epoch": epochs,
+        },
+    )
 
     set_seed(seed)
 
@@ -586,6 +606,7 @@ def main(log_level: str) -> None:
         epochs=epochs,
         validator=validator,
         early_stopper=early_stopper,
+        lr_scheduler=lr_scheduler,
         checkpoint_interval=10,
     )
 
@@ -612,6 +633,7 @@ def main(log_level: str) -> None:
                     "patience": patience,
                     "seed": seed,
                     "lr": lr,
+                    "min_lr": min_lr,
                     "Dataset": "MNIST",
                     "model": "ResNet50",
                 }
