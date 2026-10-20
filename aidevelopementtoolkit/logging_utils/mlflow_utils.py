@@ -4,6 +4,7 @@ from typing import Any, Dict, Optional
 import shutil
 
 from torch import nn
+from torch.optim import Optimizer
 import mlflow
 
 from aidevelopementtoolkit.logging_utils.file_io import load_file
@@ -207,6 +208,8 @@ def log_model_checkpoint(
         model: nn.Module, 
         config: Dict[str, Any],
         checkpoint_name: str,
+        optimizer: Optional[Optimizer] = None,
+        epoch: Optional[int] = None,
     ) -> None:
     """This function saves the model checkpoints to a temporary local directory 
     and logs that directory as an artifact to MLflow.
@@ -222,6 +225,12 @@ def log_model_checkpoint(
     checkpoint_name : str
         Name of the checkpoint (e.g., "last", "best") to be used in the artifact path in MLflow.
 
+    optimizer : Optional[Optimizer], default=None
+        Optimizer whose state will be included in the checkpoint, if provided.
+
+    epoch : Optional[int], default=None
+        Current training epoch to include in the checkpoint, if provided.
+
     Examples
     --------
     >>> log_model_checkpoint(model, {"hidden_dim": 128}, "best")
@@ -230,7 +239,13 @@ def log_model_checkpoint(
     # Store in a temporary local directory
     local_dir = "temp_model_checkpoints"
     os.makedirs(local_dir, exist_ok=True)
-    save_model(model, config, local_dir)
+    save_model(
+        model=model,
+        model_configs=config,
+        checkpoint_dir=local_dir,
+        optimizer=optimizer,
+        epoch=epoch,
+    )
 
     # Log the directory as an artifact to MLflow
     mlflow.log_artifacts(local_dir, artifact_path=f"model_checkpoints/{checkpoint_name}")
